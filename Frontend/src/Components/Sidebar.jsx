@@ -68,14 +68,14 @@ const Sidebar = () => {
       {/* 3. MIDDLE SECTION */}
       {/* flex-1 = take up all remaining empty space in the middle! */}
       {/* overflow-y-auto = add a scrollbar if the list gets too long */}
-      <div className="flex-1 overflow-y-auto mt-6">
+      <div className="flex-1 overflow-y-auto no-scrollbar mt-6">
         <p className="text-xs text-gray-400 font-semibold mb-3 uppercase">
           Recent Chat
         </p>
         <ul className="space-y-2">
           {chats
             .filter((chat) =>
-              chat.title.toLowerCase().includes(searchQuery.toLowerCase()),
+              chat.title?.toLowerCase().includes(searchQuery.toLowerCase()),
             )
             .map((chat) => (
               <li

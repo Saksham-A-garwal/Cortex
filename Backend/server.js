@@ -1,11 +1,12 @@
+require("dotenv").config();
 const express = require("express");
 const app = express();
 const {ConnectDB} = require("./DataBaseConnection");
 const authRoutes = require("./Routers/authRoutes");
-const chatRoutes = require("./Routers/chatsRoutes")
+const chatRoutes = require("./Routers/chatsRoutes");
 const MessageRoutes = require("./Routers/MessageRoutes");
 const cors = require("cors");
-const PORT = 5000
+const PORT = 5000;
 
 const corsOptions = {
     origin : "http://localhost:5173"
