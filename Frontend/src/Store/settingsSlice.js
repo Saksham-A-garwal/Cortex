@@ -9,7 +9,7 @@ const getInitialSettings = () => {
   }
 
   return {
-    model: "gemini-pro", // Your default model
+    model: "gemini-1.5-pro", // Your default model
     systemPrompt: "You are Cortex, an intelligent and helpful AI assistant.",
     theme: "dark", // Placeholder for future theme support
   };

@@ -38,6 +38,13 @@ const handleSendMessage = async (req, res) => {
       createdAt: 1,
     });
 
+    // Set special headers to keep the HTTP connection OPEN instantly!
+    // Mobile browsers often drop connections if headers take too long.
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders(); // Force headers to be sent immediately to keep mobile carriers happy
+
     // ==========================================
     // AUTO-GENERATE TITLE (If first message)
     // ==========================================
@@ -82,11 +89,6 @@ const handleSendMessage = async (req, res) => {
     // ==========================================
     // THE STREAMING LOGIC
     // ==========================================
-
-    // Set special headers to keep the HTTP connection OPEN!
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
 
     let fullAiResponse = "";
     let isClientConnected = true;

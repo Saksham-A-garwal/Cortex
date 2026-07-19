@@ -116,6 +116,10 @@ const ChatArea = () => {
           try {
             const parsedData = JSON.parse(event.data);
 
+            if (parsedData.error) {
+              throw new Error(parsedData.error);
+            }
+
             if (parsedData.chunk) {
               setmessage((prev) =>
                 prev.map((msg) =>
