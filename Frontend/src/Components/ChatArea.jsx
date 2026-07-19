@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef } from "react";
 import ChatInput from "./ChatInput";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 import { useDispatch, useSelector } from "react-redux";
-import { updateChatTitle } from "../Store/chatslice";
+import { updateChatTitle, addChat } from "../Store/chatslice";
 
 // Custom Hooks
 import { useAuth } from "../hooks/useAuth";
@@ -16,6 +16,7 @@ import MessageBubble from "./MessageBubble";
 
 const ChatArea = () => {
   const { chatId } = useParams();
+  const navigate = useNavigate();
 
   const { token } = useAuth();
   const dispatch = useDispatch();
@@ -66,6 +67,22 @@ const ChatArea = () => {
   const handleSendMessage = async (text) => {
     abortControllerRef.current = new AbortController();
 
+    let activeChatId = chatId;
+    if (!activeChatId) {
+      try {
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_URL}/api/chats`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        activeChatId = response.data.chat._id;
+        dispatch(addChat(response.data.chat));
+      } catch (err) {
+        console.error("Failed to create chat", err);
+        return;
+      }
+    }
+
     const tempUserMsg = {
       _id: Date.now().toString(),
       content: text,
@@ -88,7 +105,7 @@ const ChatArea = () => {
         },
         body: JSON.stringify({ 
           content: text, 
-          chatId: chatId,
+          chatId: activeChatId,
           model: settings.model,
           systemPrompt: settings.systemPrompt
         }),
@@ -119,10 +136,14 @@ const ChatArea = () => {
               if (parsedData.newTitle) {
                 dispatch(
                   updateChatTitle({
-                    chatId: chatId,
+                    chatId: activeChatId,
                     newTitle: parsedData.newTitle,
                   }),
                 );
+              }
+              
+              if (!chatId) {
+                navigate(`/chat/${activeChatId}`);
               }
             }
           } catch (err) {
