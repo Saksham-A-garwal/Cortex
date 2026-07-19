@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 import { useDispatch, useSelector } from "react-redux";
-import { updateChatTitle } from "../Store/chatSlice";
+import { updateChatTitle } from "../Store/chatslice";
 
 // Custom Hooks
 import { useAuth } from "../hooks/useAuth";

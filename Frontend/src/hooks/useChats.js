@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useDispatch } from "react-redux";
-import { setChats } from "../Store/chatSlice";
+import { setChats } from "../Store/chatslice";
 import { useAuth } from "./useAuth"; // Notice how we use our other custom hook inside here!
 
 export const useChats = () => {

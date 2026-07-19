@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useSelector, useDispatch } from "react-redux";
-import { addChat, removeChat } from "../Store/chatSlice";
+import { addChat, removeChat } from "../Store/chatslice";
 import toast from "react-hot-toast";
 
 // Custom Hooks
