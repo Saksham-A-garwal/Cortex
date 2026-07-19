@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
 import axios from "axios";
 import toast from "react-hot-toast";
-import Sidebar from "../components/Sidebar";
+import Sidebar from "../Components/Sidebar";
 
 const ProfilePage = () => {
   const { token } = useAuth();
