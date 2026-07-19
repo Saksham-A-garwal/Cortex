@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { isAuthenticated } = require("../middleware/authMiddleware");
+const { isAuthenticated } = require("../middleware/authmiddleware");
 const {
   getUserProfile,
   updateUserProfile,
