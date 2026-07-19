@@ -11,14 +11,21 @@
   },
   "dependencies": {
     "@microsoft/fetch-event-source": "^2.0.1",
+    "@reduxjs/toolkit": "^2.12.0",
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.2",
     "axios": "^1.18.1",
+    "katex": "^0.18.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-hot-toast": "^2.6.0",
     "react-markdown": "^10.1.0",
+    "react-redux": "^9.3.0",
     "react-router-dom": "^7.18.1",
     "react-syntax-highlighter": "^16.1.1",
+    "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
     "tailwindcss": "^4.3.2"
   },
   "devDependencies": {

@@ -1,5 +1,6 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 import LoginPage from "./Pages/LoginPage";
 import ChatPage from "./Pages/ChatPage";
 import SettingsPage from "./Pages/SettingsPage";
@@ -11,7 +12,9 @@ import ProtectedRoute from "./Layout/ProtectedRoute";
 
 const App = () => {
   return (
-    <Routes>
+    <>
+      <Toaster position="top-center" />
+      <Routes>
       <Route path="/Login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
 
@@ -25,7 +28,8 @@ const App = () => {
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+      </Routes>
+    </>
   );
 };
 

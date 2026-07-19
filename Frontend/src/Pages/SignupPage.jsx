@@ -11,7 +11,7 @@ const SignupPage = () => {
     e.preventDefault();
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/auth/SignUp",
+        `${import.meta.env.VITE_API_URL}/api/auth/SignUp`,
         {
           fullname: FullName,
           email: Email,

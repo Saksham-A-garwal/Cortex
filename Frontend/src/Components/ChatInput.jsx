@@ -1,7 +1,21 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 const ChatInput = ({ onSubmit, isLoading }) => {
   const [text, setText] = useState("");
+  const textareaRef = useRef(null);
+
+  const handleInput = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  };
+
+  useEffect(() => {
+    if (text === "" && textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
+  }, [text]);
 
   const handleSend = () => {
     // Prevent sending empty messages or sending while the AI is already thinking
@@ -24,9 +38,11 @@ const ChatInput = ({ onSubmit, isLoading }) => {
     <div className="p-4 w-full border-t border-gray-700 bg-gray-800">
       <div className="max-w-4xl mx-auto flex items-end bg-gray-900 border border-gray-600 rounded-xl p-2 focus-within:border-gray-400 transition-colors">
         <textarea
+          ref={textareaRef}
           placeholder="Type your message here..."
-          className="w-full max-h-48 min-h-[44px] bg-transparent text-white placeholder-gray-400 p-2 focus:outline-none resize-none overflow-y-auto"
+          className="w-full max-h-48 min-h-[44px] bg-transparent text-white placeholder-gray-400 p-2 focus:outline-none resize-none overflow-y-auto no-scrollbar"
           rows={1}
+          onInput={handleInput}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
           value={text}

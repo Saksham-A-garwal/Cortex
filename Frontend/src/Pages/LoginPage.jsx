@@ -1,4 +1,4 @@
-import React, { useState , useContext } from "react";
+import React, { useState, useContext } from "react";
 import { Link } from "react-router-dom"; // So we can link to the Signup page
 import { AuthContext } from "../Context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -7,7 +7,7 @@ import axios from "axios";
 const LoginPage = () => {
   const [Email, setEmail] = useState("");
   const [Password, setPassword] = useState("");
-  const {setUser, setToken} = useContext(AuthContext);
+  const { setUser, setToken } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
@@ -15,7 +15,7 @@ const LoginPage = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/auth/Login",
+        `${import.meta.env.VITE_API_URL}/api/auth/Login`,
         {
           email: Email,
           password: Password,
