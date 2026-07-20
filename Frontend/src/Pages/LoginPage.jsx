@@ -1,17 +1,20 @@
-import React, { useState, useContext } from "react";
-import { Link } from "react-router-dom"; // So we can link to the Signup page
+import { useState, useContext } from "react";
+import { Link } from "react-router-dom";
 import { AuthContext } from "../Context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import toast from "react-hot-toast";
 
 const LoginPage = () => {
   const [Email, setEmail] = useState("");
   const [Password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const { setUser, setToken } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
 
     try {
       const response = await axios.post(
@@ -22,23 +25,20 @@ const LoginPage = () => {
         },
       );
 
-      // console.log("Success", response.data);
+      toast.success("Welcome back!");
       setEmail("");
       setPassword("");
-      //Set user and token in global context
       setUser(response.data.user);
       setToken(response.data.token);
 
       navigate("/");
     } catch (error) {
-      // If they type a bad email or the server crashes, it will log here
-      console.error(
-        "Error signing up:",
-        error.response?.data?.msg || error.message,
-      );
+      const errorMsg = error.response?.data?.msg || "Failed to log in";
+      toast.error(errorMsg);
+      console.error("Error logging in:", errorMsg);
+    } finally {
+      setIsLoading(false);
     }
-
-    // console.log("Logging in with:", Email, Password);
   };
 
   return (
@@ -84,9 +84,17 @@ const LoginPage = () => {
           {/* Submit Button */}
           <button
             type="submit"
-            className="mt-4 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition-colors"
+            disabled={isLoading}
+            className="mt-4 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition-colors flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Log In
+            {isLoading ? (
+              <>
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                Logging In...
+              </>
+            ) : (
+              "Log In"
+            )}
           </button>
         </form>
 
