@@ -14,13 +14,21 @@ const handleCreateUser = async (req, res) => {
   const saltRounds = 12;
   const hashPassword = await bcrypt.hash(password, saltRounds);
 
-  await UserModel.create({
-    fullname: fullname,
-    email: email,
-    password: hashPassword,
-  });
+  try {
+    await UserModel.create({
+      fullname: fullname,
+      email: email,
+      password: hashPassword,
+    });
 
-  return res.status(201).json({ msg: "New User Created Successfully" });
+    return res.status(201).json({ msg: "New User Created Successfully" });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({ msg: "Email already exists. Please login instead." });
+    }
+    console.error("Signup error:", error);
+    return res.status(500).json({ msg: "Failed to create account. Please try again later." });
+  }
 };
 
 const handleLoginUser = async (req, res) => {
@@ -37,13 +45,13 @@ const handleLoginUser = async (req, res) => {
 
   // BUG 3 FIX: Check if user actually exists before comparing passwords
   if (!User) {
-    return res.status(401).json({ error: "Invalid email or password" });
+    return res.status(401).json({ msg: "Invalid email or password" });
   }
 
   const VerifyPassword = await bcrypt.compare(password, User.password);
 
   if (!VerifyPassword) {
-    return res.status(401).json({ error: "Invalid email or password" });
+    return res.status(401).json({ msg: "Invalid email or password" });
   }
 
   const token = setUser(User);
