@@ -9,7 +9,7 @@ const userRoutes = require("./Routers/userRoutes");
 const documentRoutes = require("./Routers/documentRoutes");
 const cors = require("cors");
 const session = require("express-session"); 
-const passport = require("./Config/passport"); 
+const passport = require("./Config/Passport"); 
 
 const PORT = process.env.PORT || 5000;
 
