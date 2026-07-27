@@ -5,7 +5,7 @@ const {
   handleCreateUser,
   handleLoginUser,
   handleOAuthCallback,
-} = require("../Controllers/AuthControllers");
+} = require("../Controllers/authControllers");
 
 // Standard Auth
 Router.post("/SignUp", handleCreateUser);
