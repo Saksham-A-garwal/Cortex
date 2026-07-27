@@ -48,6 +48,12 @@ const handleLoginUser = async (req, res) => {
     return res.status(401).json({ msg: "Invalid email or password" });
   }
 
+  // OAUTH SAFEGUARD: Check if they signed up with Google/GitHub and don't have a password
+  if (!User.password) {
+    const providerStr = User.authProvider === "google" ? "Google" : "GitHub";
+    return res.status(400).json({ msg: `You signed up with ${providerStr}. Please use the "Continue with ${providerStr}" button.` });
+  }
+
   const VerifyPassword = await bcrypt.compare(password, User.password);
 
   if (!VerifyPassword) {
@@ -64,7 +70,17 @@ const handleLoginUser = async (req, res) => {
   });
 };
 
+const handleOAuthCallback = (req, res) => {
+  // 1. Generate the standard JWT token
+  const token = setUser(req.user);
+
+  // 2. Redirect back to React, hiding the token in the URL
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  res.redirect(`${frontendUrl}/oauth-callback?token=${token}`);
+};
+
 module.exports = {
   handleCreateUser,
   handleLoginUser,
+  handleOAuthCallback
 };

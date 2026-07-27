@@ -12,8 +12,14 @@ const chatSlice = createSlice({
     },
 
     // 2. Add a brand new chat to the very top of the list
+    // If the chat already exists, move it to the top instead of duplicating.
     addChat: (state, action) => {
-      state.chats.unshift(action.payload);
+      const newChat = action.payload;
+      const existingIndex = state.chats.findIndex((c) => c._id === newChat._id);
+      if (existingIndex >= 0) {
+        state.chats.splice(existingIndex, 1);
+      }
+      state.chats.unshift(newChat);
     },
 
     // 3. Find a specific chat and update its title!
@@ -32,5 +38,6 @@ const chatSlice = createSlice({
   },
 });
 
-export const { setChats, addChat, updateChatTitle, removeChat } = chatSlice.actions;
+export const { setChats, addChat, updateChatTitle, removeChat } =
+  chatSlice.actions;
 export default chatSlice.reducer;

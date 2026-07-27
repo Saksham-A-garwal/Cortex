@@ -6,7 +6,6 @@ const {
   updateUserProfile,
 } = require("../Controllers/userControllers");
 
-// We chain the GET and PUT requests together since they share the same URL ("/profile")
 router
   .route("/profile")
   .get(isAuthenticated, getUserProfile)

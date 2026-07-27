@@ -1,11 +1,14 @@
 const MessageModel = require("../Model/MessageModel");
-const { getActiveModel } = require("../Utils/Models.js");
 const ChatModel = require("../Model/ChatModel");
 const {
   HumanMessage,
   AIMessage,
   SystemMessage,
 } = require("@langchain/core/messages");
+
+// 🚀 Import our new Brain and our new Model Configurator
+const { getCortexAgentApp } = require("../Agents/graph");
+const { getAgentModel } = require("../Agents/modelConfig");
 
 const handleGetMessages = async (req, res) => {
   if (!req.params.chatId)
@@ -15,35 +18,33 @@ const handleGetMessages = async (req, res) => {
 };
 
 const handleSendMessage = async (req, res) => {
-  const {
-    content,
-    chatId,
-    model: requestedModel,
-    systemPrompt: requestedSystemPrompt,
-  } = req.body;
-  if (!content || !chatId) {
-    return res.status(400).json({ msg: "All fields are required" });
+  const { content, chatId } = req.body;
+  if (!content) {
+    return res.status(400).json({ msg: "Content is required" });
+  }
+
+  let activeChatId = chatId;
+  let createdChat = null;
+
+  if (!activeChatId) {
+    createdChat = await ChatModel.create({ createdby: req.user._id });
+    activeChatId = createdChat._id;
   }
 
   try {
-    // 1. Save the User's new message to MongoDB
-    const userMessage = await MessageModel.create({
-      content: content,
-      chatId: chatId,
-      role: "USER",
-    });
+    // 1. Save User Message
+    await MessageModel.create({ content, chatId: activeChatId, role: "USER" });
 
-    // 2. Fetch the ENTIRE chat history from MongoDB
-    const pastMessages = await MessageModel.find({ chatId }).sort({
+    // 2. Fetch Chat History
+    const pastMessages = await MessageModel.find({ chatId: activeChatId }).sort({
       createdAt: 1,
     });
 
-    // Set special headers to keep the HTTP connection OPEN instantly!
-    // Mobile browsers often drop connections if headers take too long.
+    // 3. Set up Server-Sent Events (Streaming)
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
-    res.flushHeaders(); // Force headers to be sent immediately to keep mobile carriers happy
+    res.flushHeaders();
 
     // ==========================================
     // AUTO-GENERATE TITLE (If first message)
@@ -51,92 +52,87 @@ const handleSendMessage = async (req, res) => {
     let generatedTitle = null;
     if (pastMessages.length === 1) {
       try {
-        console.log("First message detected! Generating chat title...");
-        const titleModel = getActiveModel(requestedModel);
+        // We borrow the cheap, fast general model to write titles!
+        const titleModel = getAgentModel("general");
         const titleResponse = await titleModel.invoke([
           new HumanMessage(
-            `Generate a 3-5 word title summarizing this message. Do not use quotes or special characters. Message: "${content}"`,
+            `Generate a 3-5 word title for this message. No quotes. Message: "${content}"`,
           ),
         ]);
-
         generatedTitle = titleResponse.content.trim();
-
-        // Update the Chat in the Database
-        await ChatModel.findByIdAndUpdate(chatId, { title: generatedTitle });
-        console.log("Chat Title updated to:", generatedTitle);
+        await ChatModel.findByIdAndUpdate(activeChatId, { title: generatedTitle });
       } catch (err) {
         console.error("Failed to generate title:", err);
       }
     }
-    // ==========================================
 
-    // 3. Translate MongoDB history into LangChain objects
+    // 4. Translate DB history to LangChain format
     const langchainMessages = pastMessages.map((msg) => {
       if (msg.role === "USER") return new HumanMessage(msg.content);
       return new AIMessage(msg.content);
     });
 
-    // Use the user's custom persona, or fallback to the default!
-    const systemPrompt = new SystemMessage(
-      requestedSystemPrompt ||
-        "You are Cortex, an advanced, highly intelligent AI workspace.",
-    );
-    langchainMessages.unshift(systemPrompt);
-
-    // 4. Initialize the AI Model using our new Factory!
-     const model = getActiveModel(requestedModel);
-
     // ==========================================
-    // THE STREAMING LOGIC
+    // 🚀 THE LANGGRAPH STREAMING LOGIC
     // ==========================================
-
     let fullAiResponse = "";
     let isClientConnected = true;
 
-    // Listen for the client severing the connection (The Kill Switch)
     req.on("close", () => {
-      console.log("Client disconnected! Aborting stream...");
       isClientConnected = false;
     });
 
-    // Stream the data from whichever model is selected in .env
-    const stream = await model.stream(langchainMessages);
+    // We pass our state into the compiled LangGraph Router!
+    const stream = await getCortexAgentApp().streamEvents(
+      { messages: langchainMessages, userId: req.user._id.toString() },
+      { version: "v2" }, // Required for streamEvents
+    );
 
-    // Loop through the stream in real-time
-    for await (const chunk of stream) {
-      // If the user clicked Stop, break out of this loop instantly!
-      if (!isClientConnected) {
-        break;
-      }
+    // Loop through the graph events
+    for await (const event of stream) {
+      if (!isClientConnected) break;
 
-      if (chunk.content) {
-        fullAiResponse += chunk.content;
-        res.write(`data: ${JSON.stringify({ chunk: chunk.content })}\n\n`);
+      const nodeName = event?.metadata?.langgraph_node ?? event?.name;
+      if (nodeName === "router_agent") continue;
+
+      // LangGraph fires MANY events (tool calls, routing, etc.).
+      // We only want to stream the actual text chunks back to the user interface!
+      if (
+        event.event === "on_chat_model_stream" &&
+        event.data?.chunk?.content &&
+        typeof event.data.chunk.content === "string" // Ignore complex tool call objects
+      ) {
+        fullAiResponse += event.data.chunk.content;
+        res.write(
+          `data: ${JSON.stringify({ chunk: event.data.chunk.content })}\n\n`,
+        );
       }
     }
 
-    // Whether they stopped it early or let it finish, save whatever was generated to the DB!
+    // 5. Save the final AI response to the DB
     const finalContent = isClientConnected
       ? fullAiResponse
-      : fullAiResponse + "\n\n*[Generation stopped by user]*";
-
+      : fullAiResponse + "\n\n*[Stopped by user]*";
     const aiMessage = await MessageModel.create({
       content: finalContent,
-      chatId: chatId,
+      chatId: activeChatId,
       role: "AI",
     });
 
-    // Only send the 'done' packet if the client is actually still there to receive it!
+    // 6. Close the connection cleanly
     if (isClientConnected) {
-      // Send one final packet telling React that we are totally done, and include the new title if we made one!
       res.write(
-        `data: ${JSON.stringify({ done: true, aiMessage, newTitle: generatedTitle })}\n\n`,
+        `data: ${JSON.stringify({
+          done: true,
+          aiMessage,
+          newTitle: generatedTitle,
+          newChat: createdChat ?? undefined,
+        })}\n\n`,
       );
       return res.end();
     }
   } catch (error) {
-    console.error("Error in AI Generation:", error);
-    // If the stream hasn't started yet, we can send a 500 error.
+    console.error("Error in LangGraph Generation:", error);
     if (!res.headersSent) {
       return res.status(500).json({ msg: "Failed to generate AI response." });
     } else {

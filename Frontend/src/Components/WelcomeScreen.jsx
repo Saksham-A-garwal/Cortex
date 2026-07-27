@@ -1,35 +1,13 @@
 const WelcomeScreen = () => {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center w-full px-4 mt-16">
-      {/* Premium glowing logo container */}
-      <div className="relative mb-8">
-        <div className="absolute inset-0 bg-blue-500 blur-[40px] opacity-20 rounded-full"></div>
-        <div className="relative w-24 h-24 bg-gradient-to-tr from-gray-800 to-gray-900 border border-gray-700 rounded-3xl flex items-center justify-center shadow-2xl">
-          <svg
-            className="w-12 h-12 text-blue-400"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15.91 11.672a.375.375 0 0 1 0 .656l-5.603 3.113a.375.375 0 0 1-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112Z"
-            />
-          </svg>
-        </div>
+      {/* Clean Unified Logo */}
+      <div className="flex items-center justify-center gap-3 mb-10">
+        <span className="text-6xl text-indigo-500 font-black tracking-tighter">C</span>
+        <h1 className="text-5xl font-extrabold text-white tracking-tight">
+          CortexAi
+        </h1>
       </div>
-
-      {/* Metallic Gradient Title */}
-      <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-400 tracking-tight mb-4">
-        Cortex AI Workspace
-      </h1>
 
       <p className="text-lg text-gray-400 max-w-xl mx-auto mb-12 leading-relaxed">
         Experience the next generation of intelligent assistance. Code

@@ -1,4 +1,3 @@
-import React from "react";
 import { Routes, Route } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import LoginPage from "./Pages/LoginPage";
@@ -9,25 +8,28 @@ import DashboardLayout from "./Layout/DashboardLayout";
 import NotFoundPage from "./Pages/NotFoundPage";
 import SignupPage from "./Pages/SignupPage";
 import ProtectedRoute from "./Layout/ProtectedRoute";
+import OAuthCallback from "./Pages/OAuthCallback";
 
 const App = () => {
   return (
     <>
       <Toaster position="top-center" />
       <Routes>
-      <Route path="/Login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignupPage />} />
+        <Route path="/Login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
 
-      <Route element={<ProtectedRoute />}>
-        <Route element={<DashboardLayout />}>
-          <Route index element={<ChatPage />} />
-          <Route path="/chat/:chatId" element = {<ChatPage/>} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/oauth-callback" element={<OAuthCallback />} />
+
+        <Route element={<ProtectedRoute />}>
+          <Route element={<DashboardLayout />}>
+            <Route index element={<ChatPage />} />
+            <Route path="/chat/:chatId" element={<ChatPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+          </Route>
         </Route>
-      </Route>
 
-      <Route path="*" element={<NotFoundPage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </>
   );

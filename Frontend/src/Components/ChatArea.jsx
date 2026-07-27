@@ -32,9 +32,10 @@ const ChatArea = () => {
 
   useEffect(() => {
     if (!chatId) {
-      setmessage([]); // If we navigate to home, immediately clear the screen!
+      setmessage([]); // Clear screen when navigating to "New Chat"
       return;
     }
+
     const fetchmessages = async () => {
       try {
         const response = await axios.get(
@@ -68,20 +69,6 @@ const ChatArea = () => {
     abortControllerRef.current = new AbortController();
 
     let activeChatId = chatId;
-    if (!activeChatId) {
-      try {
-        const response = await axios.post(
-          `${import.meta.env.VITE_API_URL}/api/chats`,
-          {},
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        activeChatId = response.data.chat._id;
-        dispatch(addChat(response.data.chat));
-      } catch (err) {
-        console.error("Failed to create chat", err);
-        return;
-      }
-    }
 
     const tempUserMsg = {
       _id: Date.now().toString(),
@@ -103,11 +90,11 @@ const ChatArea = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ 
-          content: text, 
-          chatId: activeChatId,
+        body: JSON.stringify({
+          content: text,
+          chatId: chatId || undefined,
           model: settings.model,
-          systemPrompt: settings.systemPrompt
+          systemPrompt: settings.systemPrompt,
         }),
 
         signal: abortControllerRef.current.signal,
@@ -140,17 +127,21 @@ const ChatArea = () => {
               if (parsedData.newTitle) {
                 dispatch(
                   updateChatTitle({
-                    chatId: activeChatId,
+                    chatId: parsedData.newChat?._id || activeChatId,
                     newTitle: parsedData.newTitle,
                   }),
                 );
               }
               
-              if (!chatId) {
-                navigate(`/chat/${activeChatId}`);
+              if (parsedData.newChat && !chatId) {
+                dispatch(addChat(parsedData.newChat));
+                navigate(`/chat/${parsedData.newChat._id}`);
               }
+
+              // CRITICAL FIX: Prevent fetchEventSource from auto-retrying
+              abortControllerRef.current?.abort();
             }
-          } catch (err) {
+          } catch {
             console.error("Failed to parse event:", event.data);
           }
         },
