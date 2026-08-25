@@ -1,11 +1,11 @@
-const Document = require("../Model/DocumentModel");
-const { extractText } = require("../Services/documentService");
+const Document = require("../models/DocumentModel");
+const { extractText } = require("../services/documentService");
 const { sendError } = require("../utils/apiError");
 const {
   indexDocument,
   deleteDocumentVectors,
-} = require("../Services/qdrantService");
-const { storeFile, streamFileTo, deleteFile } = require("../Services/fileStorageService");
+} = require("../services/qdrantService");
+const { storeFile, streamFileTo, deleteFile } = require("../services/fileStorageService");
 
 const handleUploadDocument = async (req, res) => {
   try {

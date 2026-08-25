@@ -1,4 +1,4 @@
-const UserModel = require("../Model/UserModel");
+const UserModel = require("../models/UserModel");
 const { sendError } = require("../utils/apiError");
 
 const getUserProfile = async (req, res) => {
@@ -25,7 +25,6 @@ const updateUserProfile = async (req, res) => {
     }
 
     user.fullname = req.body.fullname || user.fullname;
-    user.email = req.body.email || user.email;
 
     const updatedUser = await user.save();
 

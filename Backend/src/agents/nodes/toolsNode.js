@@ -1,14 +1,18 @@
 const { ToolMessage } = require("@langchain/core/messages");
 
-const { buildTools } = require("../Tools");
+const { buildTools } = require("../tools");
 const { resolveAllowedTools, filterToolsByAllowlist } = require("../guardrails");
 
 const toolsNode = async (state) => {
   const lastMessage = state.messages.at(-1);
   const requestedCalls = lastMessage?.tool_calls ?? [];
 
-  const allowedNames = resolveAllowedTools(state.allowedTools);
-  const tools = filterToolsByAllowlist(buildTools(state.userId), allowedNames);
+  const availableTools = await buildTools(state.userId);
+  const allowedNames = resolveAllowedTools(
+    state.allowedTools,
+    availableTools.map((t) => t.name),
+  );
+  const tools = filterToolsByAllowlist(availableTools, allowedNames);
   const toolsByName = new Map(tools.map((toolInstance) => [toolInstance.name, toolInstance]));
 
   const outputs = [];

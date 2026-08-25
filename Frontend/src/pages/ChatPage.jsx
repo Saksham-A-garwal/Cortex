@@ -1,5 +1,5 @@
 
-import ChatArea from "../Components/ChatArea";
+import ChatArea from "../components/ChatArea";
 
 const ChatPage = () => {
   return (

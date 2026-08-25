@@ -2,12 +2,14 @@ const { z } = require("zod");
 const { tool } = require("@langchain/core/tools");
 const { TavilySearch, TavilyExtract } = require("@langchain/tavily");
 const { HumanMessage, SystemMessage } = require("@langchain/core/messages");
+const { MultiServerMCPClient } = require("@langchain/mcp-adapters");
 
-const Document = require("../../Model/DocumentModel");
-const { retrieveRelevantDocuments } = require("../../Services/qdrantService");
+const Document = require("../../models/DocumentModel");
+const { retrieveRelevantDocuments } = require("../../services/qdrantService");
+const { getUserMcpServers } = require("../../services/connectorService");
 const { getAgentModel } = require("../modelConfig");
 const { INTERNAL_LLM_TAG } = require("../internalTag");
-const { codingPrompt } = require("../Prompts/CodingAgent");
+const { codingPrompt } = require("../prompts/codingAgent");
 
 const MAX_TAVILY_RESULTS = 3;
 
@@ -179,16 +181,37 @@ const writeCodeTool = () =>
     },
   );
 
-const buildTools = (userId) => [
-  webSearchTool(),
-  readUrlTool(),
-  searchMyDocumentsTool(userId),
-  listMyDocumentsTool(userId),
-  writeCodeTool(),
-];
+const buildMcpTools = async (userId) => {
+  if (!userId) return [];
+
+  try {
+    const servers = await getUserMcpServers(userId);
+    if (Object.keys(servers).length === 0) return [];
+
+    const client = new MultiServerMCPClient(servers);
+    return await client.getTools();
+  } catch (error) {
+    console.error("MCP tool discovery failed, continuing without connector tools:", error.message);
+    return [];
+  }
+};
+
+const buildTools = async (userId) => {
+  const mcpTools = await buildMcpTools(userId);
+
+  return [
+    webSearchTool(),
+    readUrlTool(),
+    searchMyDocumentsTool(userId),
+    listMyDocumentsTool(userId),
+    writeCodeTool(),
+    ...mcpTools,
+  ];
+};
 
 module.exports = {
   buildTools,
+  buildMcpTools,
   webSearchTool,
   readUrlTool,
   searchMyDocumentsTool,

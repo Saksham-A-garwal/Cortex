@@ -1,12 +1,12 @@
 require("dotenv").config();
 
 const mongoose = require("mongoose");
-const UserModel = require("../Model/UserModel");
-const RefreshToken = require("../Model/RefreshTokenModel");
-const OtpRequest = require("../Model/OtpRequestModel");
-const otp = require("../Services/otpService");
-const tokens = require("../Services/tokenService");
-const { incrementCounter, getRedis } = require("../Config/redis");
+const UserModel = require("../src/models/UserModel");
+const RefreshToken = require("../src/models/RefreshTokenModel");
+const OtpRequest = require("../src/models/OtpRequestModel");
+const otp = require("../src/services/otpService");
+const tokens = require("../src/services/tokenService");
+const { incrementCounter, getRedis } = require("../src/config/redis");
 
 const line = (s) => console.log("\n=== " + s + " ===");
 const ok = (label, pass, extra = "") =>

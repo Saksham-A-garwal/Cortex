@@ -1,6 +1,6 @@
 import { useEffect, useContext, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../Context/AuthContext";
+import { AuthContext } from "../context/AuthContext";
 import { refreshSession } from "../api/client";
 import toast from "react-hot-toast";
 

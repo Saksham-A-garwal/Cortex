@@ -1,8 +1,8 @@
 const { SystemMessage, AIMessage } = require("@langchain/core/messages");
 
 const { getAgentModel } = require("../modelConfig");
-const { buildOrchestratorPrompt } = require("../Prompts/OrchestratorAgent");
-const { buildTools } = require("../Tools");
+const { buildOrchestratorPrompt } = require("../prompts/orchestratorAgent");
+const { buildTools } = require("../tools");
 const {
   MAX_TOOL_CALLS_PER_TURN,
   resolveAllowedTools,
@@ -42,8 +42,12 @@ const answerWithoutTools = async (state, note) => {
 };
 
 const agentNode = async (state) => {
-  const allowedNames = resolveAllowedTools(state.allowedTools);
-  const tools = filterToolsByAllowlist(buildTools(state.userId), allowedNames);
+  const availableTools = await buildTools(state.userId);
+  const allowedNames = resolveAllowedTools(
+    state.allowedTools,
+    availableTools.map((t) => t.name),
+  );
+  const tools = filterToolsByAllowlist(availableTools, allowedNames);
 
   if (isOverToolBudget(state.toolCallCount)) {
     const response = await answerWithoutTools(state, budgetExceededMessage());

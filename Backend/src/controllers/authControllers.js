@@ -1,7 +1,7 @@
-const UserModel = require("../Model/UserModel");
+const UserModel = require("../models/UserModel");
 const { sendError } = require("../utils/apiError");
-const { createOtpForEmail, verifyOtp } = require("../Services/otpService");
-const { sendOtpEmail } = require("../Services/emailService");
+const { createOtpForEmail, verifyOtp } = require("../services/otpService");
+const { sendOtpEmail } = require("../services/emailService");
 const {
   REFRESH_COOKIE_NAME,
   issueTokenPair,
@@ -9,7 +9,7 @@ const {
   revokeRefreshToken,
   issueAccessToken,
   refreshCookieOptions,
-} = require("../Services/tokenService");
+} = require("../services/tokenService");
 
 const OTP_NEUTRAL_RESPONSE = {
   message: "Check your email for a 6-digit code.",

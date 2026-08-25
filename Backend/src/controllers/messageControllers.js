@@ -1,16 +1,14 @@
-const MessageModel = require("../Model/MessageModel");
-const ChatModel = require("../Model/ChatModel");
-const {
-  HumanMessage,
-  AIMessage,
-  SystemMessage,
-} = require("@langchain/core/messages");
+const MessageModel = require("../models/MessageModel");
+const ChatModel = require("../models/ChatModel");
+const { HumanMessage, SystemMessage } = require("@langchain/core/messages");
 
-const { getCortexAgentApp } = require("../Agents/graph");
-const { getAgentModel } = require("../Agents/modelConfig");
-const { INTERNAL_LLM_TAG } = require("../Agents/internalTag");
-const { DEFAULT_ALLOWED_TOOLS } = require("../Agents/guardrails");
-const { stripToolCallMarkup } = require("../Agents/Nodes/agentNode");
+const { getCortexAgentApp } = require("../agents/graph");
+const { getAgentModel } = require("../agents/modelConfig");
+const { INTERNAL_LLM_TAG } = require("../agents/internalTag");
+const { DEFAULT_ALLOWED_TOOLS } = require("../agents/guardrails");
+const { stripToolCallMarkup } = require("../agents/nodes/agentNode");
+const { buildAgentMessages } = require("../services/memoryService");
+const { recordAndMaybeExtract, retrieveRelevantFacts } = require("../services/ltmService");
 const { sendError } = require("../utils/apiError");
 
 const sanitizeChatTitle = (raw) => {
@@ -49,10 +47,40 @@ const handleGetMessages = async (req, res) => {
 };
 
 const handleSendMessage = async (req, res) => {
-  const { content, chatId } = req.body;
+  const { content, chatId, idempotencyKey } = req.body;
+
+  // A repeat of a send that already landed - a transport-level retry (e.g. the SSE client
+  // re-issuing the POST on tab refocus), not a new message. Return the reply that was
+  // already produced instead of saving the question twice and generating a second answer.
+  if (idempotencyKey) {
+    const alreadySent = await MessageModel.findOne({ idempotencyKey });
+
+    if (alreadySent) {
+      const chatMessages = await MessageModel.find({ chatId: alreadySent.chatId });
+      const aiReplies = chatMessages.filter((message) => message.role === "AI");
+      const chat = await ChatModel.findOne({ _id: alreadySent.chatId });
+
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.flushHeaders();
+
+      res.write(
+        `data: ${JSON.stringify({
+          done: true,
+          duplicate: true,
+          aiMessage: aiReplies[aiReplies.length - 1] ?? null,
+          newChat: chat ? { _id: chat._id, title: chat.title } : undefined,
+        })}\n\n`,
+      );
+
+      return res.end();
+    }
+  }
 
   let activeChatId = chatId;
   let createdChat = null;
+  let chatDoc = null;
 
   let fullAiResponse = "";
   let rawAiResponse = "";
@@ -72,13 +100,19 @@ const handleSendMessage = async (req, res) => {
     }
 
     activeChatId = chat._id;
+    chatDoc = chat;
   } else {
     createdChat = await ChatModel.create({ createdby: req.user._id });
     activeChatId = createdChat._id;
+    chatDoc = createdChat;
   }
 
   try {
-    await MessageModel.create({ content, chatId: activeChatId, role: "USER" });
+    await MessageModel.create({ content, chatId: activeChatId, role: "USER", idempotencyKey });
+
+    recordAndMaybeExtract(req.user._id).catch((err) =>
+      console.error("LTM extraction failed:", err),
+    );
 
     const pastMessages = await MessageModel.find({ chatId: activeChatId }).sort({
       createdAt: 1,
@@ -114,10 +148,14 @@ const handleSendMessage = async (req, res) => {
       }
     }
 
-    const langchainMessages = pastMessages.map((msg) => {
-      if (msg.role === "USER") return new HumanMessage(msg.content);
-      return new AIMessage(msg.content);
-    });
+    const langchainMessages = await buildAgentMessages({ chat: chatDoc, pastMessages });
+
+    const relevantFacts = await retrieveRelevantFacts(req.user._id, content);
+    if (relevantFacts.length > 0) {
+      langchainMessages.unshift(
+        new SystemMessage(`Known facts about this user:\n${relevantFacts.map((f) => `- ${f}`).join("\n")}`),
+      );
+    }
 
     req.on("close", () => {
       isClientConnected = false;

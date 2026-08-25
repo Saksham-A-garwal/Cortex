@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const OtpRequest = require("../Model/OtpRequestModel");
+const OtpRequest = require("../models/OtpRequestModel");
 
 const OTP_LENGTH = 6;
 const OTP_TTL_MINUTES = 10;

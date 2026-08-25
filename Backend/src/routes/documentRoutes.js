@@ -1,8 +1,8 @@
 const express = require("express");
 const multer = require("multer");
-const { isAuthenticated } = require("../middleware/authmiddleware");
+const { isAuthenticated } = require("../middleware/authMiddleware");
 const { validate } = require("../middleware/validate");
-const { idParamSchema } = require("../Validation/schemas");
+const { idParamSchema } = require("../validation/schemas");
 const { fileTypeGuard } = require("../middleware/fileTypeGuard");
 const { sendError } = require("../utils/apiError");
 const {
@@ -10,7 +10,7 @@ const {
   handleGetDocuments,
   handleDeleteDocument,
   handleGetDocumentContent,
-} = require("../Controllers/documentControllers");
+} = require("../controllers/documentControllers");
 
 const router = express.Router();
 const upload = multer({

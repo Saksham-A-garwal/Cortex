@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { useDispatch } from "react-redux";
-import { setChats } from "../Store/chatslice";
+import { setChats } from "../store/chatSlice";
 import { useAuth } from "./useAuth";
 
 export const useChats = () => {

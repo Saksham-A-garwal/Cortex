@@ -5,15 +5,17 @@ const session = require("express-session");
 
 const cookieParser = require("cookie-parser");
 
-const passport = require("./Config/Passport");
+const passport = require("./config/passport");
 const { sanitizeRequest } = require("./middleware/sanitize");
 const { sendError, ApiError } = require("./utils/apiError");
 
-const authRoutes = require("./Routers/authRoutes");
-const chatRoutes = require("./Routers/chatsRoutes");
-const MessageRoutes = require("./Routers/MessageRoutes");
-const userRoutes = require("./Routers/userRoutes");
-const documentRoutes = require("./Routers/documentRoutes");
+const authRoutes = require("./routes/authRoutes");
+const chatRoutes = require("./routes/chatsRoutes");
+const MessageRoutes = require("./routes/messageRoutes");
+const userRoutes = require("./routes/userRoutes");
+const documentRoutes = require("./routes/documentRoutes");
+const memoryRoutes = require("./routes/memoryRoutes");
+const connectorRoutes = require("./routes/connectorRoutes");
 
 const buildAllowedOrigins = (frontendUrl = process.env.FRONTEND_URL) =>
   (frontendUrl || "http://localhost:5173")
@@ -64,6 +66,8 @@ const createApp = () => {
   app.use("/api/messages", MessageRoutes);
   app.use("/api/users", userRoutes);
   app.use("/api/documents", documentRoutes);
+  app.use("/api/memory", memoryRoutes);
+  app.use("/api/connectors", connectorRoutes);
 
   app.use((_req, res) => sendError(res, 404, "NOT_FOUND", "This endpoint does not exist."));
 

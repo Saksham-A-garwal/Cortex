@@ -1,9 +1,9 @@
 const { StateGraph, START, END } = require("@langchain/langgraph");
 
-const { StateAnnotation } = require("./State");
-const { agentNode } = require("./Nodes/agentNode");
-const { toolsNode } = require("./Nodes/toolsNode");
-const { isGreeting, greetingNode } = require("./Nodes/greetingNode");
+const { StateAnnotation } = require("./state");
+const { agentNode } = require("./nodes/agentNode");
+const { toolsNode } = require("./nodes/toolsNode");
+const { isGreeting, greetingNode } = require("./nodes/greetingNode");
 
 const routeFromEntry = (state) => {
   const latest = state.messages.at(-1);

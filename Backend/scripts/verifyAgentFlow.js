@@ -2,12 +2,12 @@
 require("dotenv").config();
 
 const mongoose = require("mongoose");
-const DocumentModel = require("../Model/DocumentModel");
-const { indexDocument, deleteDocumentVectors } = require("../Services/qdrantService");
-const { getCortexAgentApp } = require("../Agents/graph");
-const { stripToolCallMarkup } = require("../Agents/Nodes/agentNode");
-const { INTERNAL_LLM_TAG } = require("../Agents/internalTag");
-const { DEFAULT_ALLOWED_TOOLS, MAX_TOOL_CALLS_PER_TURN } = require("../Agents/guardrails");
+const DocumentModel = require("../src/models/DocumentModel");
+const { indexDocument, deleteDocumentVectors } = require("../src/services/qdrantService");
+const { getCortexAgentApp } = require("../src/agents/graph");
+const { stripToolCallMarkup } = require("../src/agents/nodes/agentNode");
+const { INTERNAL_LLM_TAG } = require("../src/agents/internalTag");
+const { DEFAULT_ALLOWED_TOOLS, MAX_TOOL_CALLS_PER_TURN } = require("../src/agents/guardrails");
 const { HumanMessage } = require("@langchain/core/messages");
 
 const PUBLIC_TOOLS = new Set(DEFAULT_ALLOWED_TOOLS);

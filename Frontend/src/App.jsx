@@ -1,15 +1,14 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-import LoginPage from "./Pages/LoginPage";
-import ChatPage from "./Pages/ChatPage";
-import SettingsPage from "./Pages/SettingsPage";
-import ProfilePage from "./Pages/ProfilePage";
-import LibraryPage from "./Pages/LibraryPage";
-import DashboardLayout from "./Layout/DashboardLayout";
-import NotFoundPage from "./Pages/NotFoundPage";
-import ProtectedRoute from "./Layout/ProtectedRoute";
-import OAuthCallback from "./Pages/OAuthCallback";
-import ErrorBoundary from "./Components/ErrorBoundary";
+import LoginPage from "./pages/LoginPage";
+import ChatPage from "./pages/ChatPage";
+import SettingsPage from "./pages/SettingsPage";
+import LibraryPage from "./pages/LibraryPage";
+import DashboardLayout from "./layout/DashboardLayout";
+import NotFoundPage from "./pages/NotFoundPage";
+import ProtectedRoute from "./layout/ProtectedRoute";
+import OAuthCallback from "./pages/OAuthCallback";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const App = () => {
   return (
@@ -28,7 +27,7 @@ const App = () => {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/library" element={<LibraryPage />} />
             <Route path="/documents" element={<Navigate to="/library" replace />} />
-            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/profile" element={<Navigate to="/settings?tab=profile" replace />} />
           </Route>
         </Route>
 

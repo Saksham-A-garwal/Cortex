@@ -3,7 +3,7 @@ const Router = express.Router();
 const passport = require("passport");
 
 const { validate } = require("../middleware/validate");
-const { otpRequestSchema, otpVerifySchema } = require("../Validation/schemas");
+const { otpRequestSchema, otpVerifySchema } = require("../validation/schemas");
 const { otpRequestRateLimit } = require("../middleware/otpRateLimit");
 const {
   handleOAuthCallback,
@@ -11,7 +11,7 @@ const {
   handleOtpVerify,
   handleRefresh,
   handleLogout,
-} = require("../Controllers/authControllers");
+} = require("../controllers/authControllers");
 
 const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5174";
 

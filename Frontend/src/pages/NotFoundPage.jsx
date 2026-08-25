@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import SystemScreen from "../Components/SystemScreen";
+import SystemScreen from "../components/SystemScreen";
 
 const NotFoundPage = () => {
   return (

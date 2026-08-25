@@ -4,7 +4,7 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 import { api, getAccessToken, refreshSession } from "../api/client";
 import { useDispatch, useSelector } from "react-redux";
-import { updateChatTitle, addChat } from "../Store/chatslice";
+import { updateChatTitle, addChat } from "../store/chatSlice";
 
 import { useAuth } from "../hooks/useAuth";
 import { useAutoScroll } from "../hooks/useAutoScroll";
@@ -46,6 +46,7 @@ const ChatArea = () => {
   const [error, setError] = useState(null);
 
   const abortControllerRef = useRef(null);
+  const isSendingRef = useRef(false);
 
   const endOfMessagesRef = useAutoScroll([message, isLoading, error]);
 
@@ -110,11 +111,20 @@ const ChatArea = () => {
   };
 
   const handleSendMessage = async (text) => {
+    if (isSendingRef.current) return;
+    isSendingRef.current = true;
+
     abortControllerRef.current = new AbortController();
 
     let activeChatId = chatId;
 
     let failedIntoChat = null;
+
+    // One key per logical send. If the transport re-issues the request internally (retry,
+    // reconnect), the same key goes out and the backend rejects the repeat. A genuinely new
+    // message gets a fresh key, so sending the same text twice on purpose still works.
+    const idempotencyKey =
+      globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
     const tempUserMsg = {
       _id: Date.now().toString(),
@@ -151,9 +161,17 @@ const ChatArea = () => {
           chatId: chatId || undefined,
           model: settings.model,
           systemPrompt: settings.systemPrompt,
+          idempotencyKey,
         }),
 
         signal: abortControllerRef.current.signal,
+
+        // Without this, fetch-event-source registers a `visibilitychange` listener that
+        // aborts the in-flight request and re-issues the ENTIRE POST every time the tab
+        // regains focus - producing a duplicate user message and a duplicate AI reply on
+        // every alt-tab. The retry happens inside the library, so no guard in this file
+        // can catch it; the only fix is to stop it registering the listener at all.
+        openWhenHidden: true,
 
         async onopen(response) {
           const contentType = response.headers.get("content-type") || "";
@@ -257,6 +275,7 @@ const ChatArea = () => {
         }
       }
     } finally {
+      isSendingRef.current = false;
       setIsLoading(false);
     }
   };

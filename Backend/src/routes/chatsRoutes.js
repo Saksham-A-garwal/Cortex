@@ -1,14 +1,14 @@
 const express = require("express");
 const Router = express.Router();
 
-const { isAuthenticated } = require("../middleware/authmiddleware");
+const { isAuthenticated } = require("../middleware/authMiddleware");
 const { validate } = require("../middleware/validate");
-const { idParamSchema } = require("../Validation/schemas");
+const { idParamSchema } = require("../validation/schemas");
 const {
   handleCreateChat,
   handleGetUserChats,
   handleDeleteChat,
-} = require("../Controllers/chatControllers");
+} = require("../controllers/chatControllers");
 
 Router.use(isAuthenticated);
 Router.get("/", handleGetUserChats);

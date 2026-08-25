@@ -19,10 +19,28 @@ const otpVerifySchema = z.object({
 const sendMessageSchema = z.object({
   content: z.string().trim().min(1, "Message content is required.").max(20000),
   chatId: objectId.optional(),
+  idempotencyKey: z.string().trim().min(8).max(100).optional(),
 });
 
 const chatIdParamSchema = z.object({ chatId: objectId });
 const idParamSchema = z.object({ id: objectId });
+
+const factId = z
+  .string()
+  .regex(
+    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
+    "Must be a valid memory id.",
+  );
+
+const factIdParamSchema = z.object({ id: factId });
+const updateMemorySchema = z.object({
+  text: z.string().trim().min(1, "Memory text is required.").max(500),
+});
+const updateMemorySettingsSchema = z.object({ enabled: z.boolean() });
+
+const connectorIdParamSchema = z.object({
+  id: z.string().trim().min(1).max(50).regex(/^[a-z0-9-]+$/, "Must be a valid connector id."),
+});
 
 module.exports = {
   objectId,
@@ -31,4 +49,8 @@ module.exports = {
   sendMessageSchema,
   chatIdParamSchema,
   idParamSchema,
+  factIdParamSchema,
+  updateMemorySchema,
+  updateMemorySettingsSchema,
+  connectorIdParamSchema,
 };

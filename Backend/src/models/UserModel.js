@@ -26,7 +26,11 @@ const UserSchema = new mongoose.Schema({
   role : {
     type : String,
     default : "USER"
-  }
+  },
+  ltmEnabled: {
+    type: Boolean,
+    default: false,
+  },
 }, {timestamps : true});
 
 const UserModel = mongoose.models.User || mongoose.model("User" , UserSchema);

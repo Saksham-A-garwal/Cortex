@@ -1,6 +1,6 @@
 import { useState, useContext, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { AuthContext } from "../Context/AuthContext";
+import { AuthContext } from "../context/AuthContext";
 import { api } from "../api/client";
 import toast from "react-hot-toast";
 import { ShieldCheck, Users, Crown, AlertCircle, ArrowLeft } from "lucide-react";

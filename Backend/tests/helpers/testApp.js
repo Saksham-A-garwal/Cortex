@@ -89,9 +89,19 @@ class FakeModel {
   }
 }
 
+const defaultMemoryQdrant = {
+  embed: async () => [0.1, 0.2, 0.3],
+  upsertFact: async () => {},
+  searchByVector: async () => [],
+  listFacts: async () => [],
+  deleteFacts: async () => {},
+  isConfigured: () => false,
+};
+
 const buildTestApp = ({
   authenticatedUser = { _id: "user_a" },
   cortexAgentApp = { streamEvents: async function* () {} },
+  memoryQdrant = {},
 } = {}) => {
   for (const key of Object.keys(require.cache)) {
     if (key.startsWith(BACKEND_ROOT) && !key.includes("node_modules")) delete require.cache[key];
@@ -102,20 +112,22 @@ const buildTestApp = ({
     Message: new FakeModel("Message"),
     User: new FakeModel("User"),
     Document: new FakeModel("Document"),
+    UserMemoryState: new FakeModel("UserMemoryState"),
   };
 
-  stubModule("Model/ChatModel.js", models.Chat);
-  stubModule("Model/MessageModel.js", models.Message);
-  stubModule("Model/UserModel.js", models.User);
-  stubModule("Model/DocumentModel.js", models.Document);
+  stubModule("src/models/ChatModel.js", models.Chat);
+  stubModule("src/models/MessageModel.js", models.Message);
+  stubModule("src/models/UserModel.js", models.User);
+  stubModule("src/models/DocumentModel.js", models.Document);
+  stubModule("src/models/UserMemoryState.js", models.UserMemoryState);
 
-  stubModule("Config/Passport.js", {
+  stubModule("src/config/passport.js", {
     initialize: () => (_req, _res, next) => next(),
     session: () => (_req, _res, next) => next(),
     authenticate: () => (_req, _res, next) => next(),
   });
 
-  stubModule("middleware/authmiddleware.js", {
+  stubModule("src/middleware/authMiddleware.js", {
     isAuthenticated: (req, res, next) => {
       if (!authenticatedUser) {
         return res.status(401).json({ error: { code: "UNAUTHENTICATED", message: "No token." } });
@@ -126,21 +138,22 @@ const buildTestApp = ({
     restrictedto: () => (_req, _res, next) => next(),
   });
 
-  stubModule("Agents/graph.js", {
+  stubModule("src/agents/graph.js", {
     getCortexAgentApp: () => cortexAgentApp,
   });
-  stubModule("Agents/modelConfig.js", { getAgentModel: () => ({ invoke: async () => ({ content: "Title" }) }) });
-  stubModule("Services/qdrantService.js", {
+  stubModule("src/agents/modelConfig.js", { getAgentModel: () => ({ invoke: async () => ({ content: "Title" }) }) });
+  stubModule("src/services/qdrantService.js", {
     indexDocument: async () => 3,
     deleteDocumentVectors: async () => {},
   });
-  stubModule("Services/fileStorageService.js", {
+  stubModule("src/services/fileStorageService.js", {
     storeFile: async () => "fake-storage-id",
     streamFileTo: async () => {},
     deleteFile: async () => {},
   });
+  stubModule("src/services/memoryQdrantService.js", { ...defaultMemoryQdrant, ...memoryQdrant });
 
-  const { createApp } = require(resolve("app.js"));
+  const { createApp } = require(resolve("src/app.js"));
   return { app: createApp(), models };
 };
 

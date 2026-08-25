@@ -2,9 +2,12 @@ const MAX_TOOL_CALLS_PER_TURN = Number(process.env.MAX_TOOL_CALLS_PER_TURN || 5)
 
 const DEFAULT_ALLOWED_TOOLS = ["web_search", "read_url", "search_my_documents", "list_my_documents", "write_code"];
 
-const resolveAllowedTools = (requested) => {
-  if (!Array.isArray(requested) || requested.length === 0) return DEFAULT_ALLOWED_TOOLS;
-  return requested.filter((name) => DEFAULT_ALLOWED_TOOLS.includes(name));
+// `availableToolNames` defaults to the fixed built-in set, but callers that also have
+// per-user MCP connector tools built for this turn should pass the full available name
+// list (built-ins + connector tools) so those aren't silently stripped by the allowlist.
+const resolveAllowedTools = (requested, availableToolNames = DEFAULT_ALLOWED_TOOLS) => {
+  if (!Array.isArray(requested) || requested.length === 0) return availableToolNames;
+  return requested.filter((name) => availableToolNames.includes(name));
 };
 
 const filterToolsByAllowlist = (tools, allowedNames) => {

@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const { VerifyUser } = require("../Services/authServices");
+const { VerifyUser } = require("../services/authService");
 const { sendError } = require("../utils/apiError");
 
 const isAuthenticated = (req, res, next) => {

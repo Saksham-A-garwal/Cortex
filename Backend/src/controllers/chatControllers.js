@@ -1,5 +1,5 @@
-const ChatModel = require("../Model/ChatModel");
-const MessageModel = require("../Model/MessageModel");
+const ChatModel = require("../models/ChatModel");
+const MessageModel = require("../models/MessageModel");
 const { sendError } = require("../utils/apiError");
 
 const handleCreateChat = async (req, res) => {

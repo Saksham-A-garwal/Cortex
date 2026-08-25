@@ -13,6 +13,11 @@ const ChatInput = ({ onSubmit, isLoading, initialText }) => {
 
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
+  const isSendingRef = useRef(false);
+
+  useEffect(() => {
+    if (!isLoading) isSendingRef.current = false;
+  }, [isLoading]);
 
   const handleInput = () => {
     if (textareaRef.current) {
@@ -49,7 +54,8 @@ const ChatInput = ({ onSubmit, isLoading, initialText }) => {
   }, [uploadedFileUrl]);
 
   const handleSend = () => {
-    if (!text.trim() || isLoading) return;
+    if (!text.trim() || isLoading || isSendingRef.current) return;
+    isSendingRef.current = true;
 
     onSubmit(text);
     setText("");

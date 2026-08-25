@@ -1,4 +1,4 @@
-const { incrementCounter, getTimeToLive, isRedisConfigured } = require("../Config/redis");
+const { incrementCounter, getTimeToLive, isRedisConfigured } = require("../config/redis");
 const { sendError } = require("../utils/apiError");
 
 const WINDOW_SECONDS = 15 * 60;

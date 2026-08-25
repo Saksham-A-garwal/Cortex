@@ -2,13 +2,13 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { sanitizeValue } = require("../middleware/sanitize");
+const { sanitizeValue } = require("../src/middleware/sanitize");
 const {
   sanitizeFilename,
   detectAcceptedType,
   looksLikePlainText,
-} = require("../middleware/fileTypeGuard");
-const schemas = require("../Validation/schemas");
+} = require("../src/middleware/fileTypeGuard");
+const schemas = require("../src/validation/schemas");
 
 const BACKSLASH = String.fromCharCode(92);
 const pdfBuffer = () => Buffer.concat([Buffer.from("%PDF-1.4\n"), Buffer.alloc(4200, 0x20)]);

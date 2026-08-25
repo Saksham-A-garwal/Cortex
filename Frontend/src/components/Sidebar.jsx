@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { api } from "../api/client";
 import { useSelector, useDispatch } from "react-redux";
-import { addChat, removeChat } from "../Store/chatslice";
+import { addChat, removeChat } from "../store/chatSlice";
 import toast from "react-hot-toast";
-import { Search, Plus, Settings, Home, Library, Trash2, PanelLeftClose } from "lucide-react";
+import { Search, Plus, Settings, Home, Library, Trash2, PanelLeftClose, LogOut } from "lucide-react";
 
 import { useChats } from "../hooks/useChats";
 import { useDebounce } from "../hooks/useDebounce";
+import { useAuth } from "../hooks/useAuth";
 
 import SearchModal from "./SearchModal";
 
@@ -16,12 +17,31 @@ const Sidebar = ({ isOpen, setIsSidebarOpen }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
+  const { User, logout } = useAuth();
 
   const { isLoading } = useChats();
 
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 300);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleLogout = async () => {
+    setIsUserMenuOpen(false);
+    await logout();
+    navigate("/Login", { replace: true });
+  };
 
   const filteredChats = chats.filter((chat) =>
     chat.title?.toLowerCase().includes(debouncedSearch.toLowerCase())
@@ -154,22 +174,49 @@ const Sidebar = ({ isOpen, setIsSidebarOpen }) => {
             </ul>
           </div>
 
-          <div className="border-t border-white/10 pt-3 mt-2">
-            <button onClick={() => navigate("/settings")} className={navItemClass("/settings")}>
-              <Settings size={16} className="shrink-0" />
-              Settings
-            </button>
+          <div className="border-t border-white/10 pt-3 mt-2 relative" ref={userMenuRef}>
+            {isUserMenuOpen && (
+              <div className="absolute bottom-full left-0 right-0 mb-2 bg-zinc-800 border border-white/10 rounded-xl shadow-2xl overflow-hidden py-1">
+                <div className="px-3 py-2 border-b border-white/10">
+                  <p className="text-sm font-semibold text-white truncate">
+                    {User?.fullname || "User"}
+                  </p>
+                  <p className="text-xs text-secondary-text truncate">{User?.email}</p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    navigate("/settings");
+                  }}
+                  className="w-full flex items-center gap-2.5 text-left px-3 py-2 text-sm text-neutral-50 hover:bg-zinc-900 transition-colors"
+                >
+                  <Settings size={16} className="shrink-0" />
+                  Settings
+                </button>
+
+                <div className="border-t border-white/10 mt-1 pt-1">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2.5 text-left px-3 py-2 text-sm text-red-400 hover:bg-zinc-900 transition-colors"
+                  >
+                    <LogOut size={16} className="shrink-0" />
+                    Log out
+                  </button>
+                </div>
+              </div>
+            )}
 
             <button
-              onClick={() => navigate("/profile")}
-              className={`${navItemClass("/profile")} mt-1`}
+              onClick={() => setIsUserMenuOpen((prev) => !prev)}
+              className="w-full flex items-center gap-2.5 text-left p-2 rounded-md transition-colors font-medium text-neutral-50 hover:bg-zinc-900 hover:text-white"
             >
               <img
-                src="https://ui-avatars.com/api/?name=User&background=155dfc"
+                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(User?.fullname || "User")}&background=155dfc&color=fff`}
                 alt=""
                 className="w-6 h-6 rounded-full shrink-0"
               />
-              Profile
+              <span className="truncate">{User?.fullname || "Account"}</span>
             </button>
           </div>
         </div>

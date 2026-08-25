@@ -7,10 +7,10 @@ const {
   resolveAllowedTools,
   filterToolsByAllowlist,
   isOverToolBudget,
-} = require("../Agents/guardrails");
+} = require("../src/agents/guardrails");
 
-const { isGreeting } = require("../Agents/Nodes/greetingNode");
-const { routeFromEntry, shouldContinueToTools } = require("../Agents/graph");
+const { isGreeting } = require("../src/agents/nodes/greetingNode");
+const { routeFromEntry, shouldContinueToTools } = require("../src/agents/graph");
 
 test("FR-AGENT-05: a fresh turn is under budget", () => {
   assert.equal(isOverToolBudget(0), false);

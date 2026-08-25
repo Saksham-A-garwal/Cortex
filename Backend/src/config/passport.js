@@ -1,7 +1,7 @@
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const GitHubStrategy = require("passport-github2").Strategy;
-const UserModel = require("../Model/UserModel");
+const UserModel = require("../models/UserModel");
 
 if (process.env.GOOGLE_CLIENT_ID) {
   passport.use(
@@ -55,7 +55,7 @@ if (process.env.GITHUB_CLIENT_ID) {
       async (accessToken, refreshToken, profile, done) => {
         try {
           let email = profile.emails && profile.emails.length > 0 ? profile.emails[0].value : null;
-          
+
           if (!email) {
             email = `${profile.username}@github.com`;
           }
