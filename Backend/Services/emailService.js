@@ -15,6 +15,10 @@ const getTransporter = () => {
       connectionTimeout: 10000,
       greetingTimeout: 10000,
       socketTimeout: 10000,
+      // Render's outbound network resolved smtp.gmail.com to an IPv6 address it has no
+      // route to (connect ENETUNREACH), even though the host is dual-stack and IPv4 works
+      // fine. Forcing IPv4 here is the targeted fix for this transport specifically.
+      family: 4,
     });
   }
   return transporter;
