@@ -191,7 +191,7 @@ The sidebar's search modal filters conversations already loaded in client state 
 | **LLM Providers** | OpenRouter (DeepSeek Chat / DeepSeek R1) · Google Gemini (embeddings) |
 | **Orchestration** | LangGraph (`@langchain/langgraph`), single tool-calling orchestrator agent |
 | **Tools** | Tavily (web search + page extraction) |
-| **Authentication** | Passwordless — email OTP (`nodemailer` over Gmail SMTP) or Google/GitHub OAuth 2.0 (`passport-google-oauth20`, `passport-github2`) — backed by short-lived JWT access tokens and rotating, revocable refresh tokens |
+| **Authentication** | Passwordless — email OTP (via Resend's HTTP API) or Google/GitHub OAuth 2.0 (`passport-google-oauth20`, `passport-github2`) — backed by short-lived JWT access tokens and rotating, revocable refresh tokens |
 | **Testing** | Node's built-in test runner (`node:test`) + `supertest` for integration tests against the real Express app |
 | **Deployment** | Render (backend) · Vercel (frontend) |
 | **Package Manager** | npm — `.npmrc` sets `legacy-peer-deps=true` |
@@ -317,7 +317,7 @@ Cortex/
 │  │  ├─ authServices.js
 │  │  ├─ tokenService.js       # Access/refresh token issuance and rotation
 │  │  ├─ otpService.js         # OTP generation, hashing, verification
-│  │  ├─ emailService.js       # OTP delivery over SMTP
+│  │  ├─ emailService.js       # OTP delivery via Resend's HTTP API (not raw SMTP)
 │  │  ├─ documentService.js     # PDF/TXT text extraction
 │  │  ├─ fileStorageService.js  # GridFS read/write for original file bytes (Library preview)
 │  │  └─ qdrantService.js       # Vector store read/write, with in-memory fallback
@@ -486,7 +486,7 @@ If generation fails partway — a provider outage, an exhausted API quota — th
 | `JWT_ACCESS_SECRET` | Yes | Signs/verifies API access tokens. Must differ from `SESSION_SECRET` |
 | `ACCESS_TOKEN_TTL` | No *(defaults to `15m`)* | Access token lifetime |
 | `REFRESH_TOKEN_TTL_DAYS` | No *(defaults to `7`)* | Refresh token lifetime, in days |
-| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `MAIL_FROM` | Yes | Gmail SMTP credentials for OTP delivery — use a dedicated throwaway account and an App Password, not a personal Gmail password |
+| `RESEND_API_KEY` / `MAIL_FROM` | Yes | OTP delivery via [Resend](https://resend.com)'s HTTP API, not raw SMTP — many PaaS hosts (Render included) block outbound SMTP ports entirely, which an HTTPS API sidesteps |
 | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Yes | Upstash Redis — OTP rate limiting and refresh-token reuse tracking |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | For Google OAuth | Google OAuth app credentials |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | For GitHub OAuth | GitHub OAuth app credentials |
