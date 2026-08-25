@@ -69,6 +69,22 @@ const createFallbackVectorStore = () => ({
   },
 });
 
+const FILTERED_PAYLOAD_FIELDS = ["metadata.ownerId", "metadata.documentId"];
+
+const ensurePayloadIndexes = async (store) => {
+  for (const field of FILTERED_PAYLOAD_FIELDS) {
+    try {
+      await store.client.createPayloadIndex(collectionName, {
+        field_name: field,
+        field_schema: "keyword",
+        wait: true,
+      });
+    } catch (error) {
+      console.warn(`Could not ensure the ${field} payload index:`, error.message);
+    }
+  }
+};
+
 const getVectorStore = async () => {
   if (!vectorStorePromise) {
     vectorStorePromise = (async () => {
@@ -81,14 +97,17 @@ const getVectorStore = async () => {
       try {
         const embeddings = new GoogleGenerativeAIEmbeddings({
           apiKey,
-          model: "gemini-embedding-001",
+          model: process.env.EMBEDDING_MODEL || "gemini-embedding-001",
         });
 
-        return await QdrantVectorStore.fromExistingCollection(embeddings, {
+        const store = await QdrantVectorStore.fromExistingCollection(embeddings, {
           url: process.env.QDRANT_URL,
           apiKey: process.env.QDRANT_API_KEY,
           collectionName,
         });
+
+        await ensurePayloadIndexes(store);
+        return store;
       } catch (error) {
         console.warn(
           "Falling back to in-memory RAG storage because Qdrant is unavailable:",

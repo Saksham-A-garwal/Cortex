@@ -1,5 +1,6 @@
 const ChatModel = require("../Model/ChatModel");
 const MessageModel = require("../Model/MessageModel");
+const { sendError } = require("../utils/apiError");
 
 const handleCreateChat = async (req, res) => {
   const chat = await ChatModel.create({ createdby: req.user._id });
@@ -15,16 +16,21 @@ const handleGetUserChats = async (req, res) => {
 
 const handleDeleteChat = async (req, res) => {
   try {
-    const { id } = req.params;
-    // 1. Delete all messages associated with this chat
-    await MessageModel.deleteMany({ chatId: id });
-    // 2. Delete the chat itself (and ensure it belongs to the logged-in user)
-    await ChatModel.findOneAndDelete({ _id: id, createdby: req.user._id });
-    
+    const chat = await ChatModel.findOneAndDelete({
+      _id: req.params.id,
+      createdby: req.user._id,
+    });
+
+    if (!chat) {
+      return sendError(res, 404, "NOT_FOUND", "Chat not found.");
+    }
+
+    await MessageModel.deleteMany({ chatId: chat._id });
+
     return res.status(200).json({ msg: "Chat deleted successfully" });
   } catch (error) {
     console.error("Error deleting chat:", error);
-    return res.status(500).json({ msg: "Failed to delete chat" });
+    return sendError(res, 500, "DELETE_FAILED", "Failed to delete chat.");
   }
 };
 

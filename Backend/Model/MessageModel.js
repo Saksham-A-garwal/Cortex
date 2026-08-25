@@ -15,10 +15,14 @@ const MessageSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Chat",
     },
+    toolsUsed: {
+      type: [String],
+      default: undefined,
+    },
   },
   { timestamps: true },
 );
 
-const MessageModel = mongoose.model("Message", MessageSchema);
+const MessageModel = mongoose.models.Message || mongoose.model("Message", MessageSchema);
 
 module.exports = MessageModel;

@@ -6,19 +6,16 @@ import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 const SettingsPage = () => {
   const dispatch = useDispatch();
-  const { setToken, setUser } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    setToken("");
-    setUser(null);
-    navigate("/Login");
+  const handleLogout = async () => {
+    await logout();
+    navigate("/Login", { replace: true });
   };
 
-  // Grab the current settings from the Redux Global Store
   const currentSettings = useSelector((state) => state.settings);
 
-  // Use local state for the form so we don't spam Redux on every single keystroke
   const [formData, setFormData] = useState({
     model: currentSettings.model,
     systemPrompt: currentSettings.systemPrompt,
@@ -31,7 +28,6 @@ const SettingsPage = () => {
   const handleSave = (e) => {
     e.preventDefault();
 
-    // Push the changes up to Redux! (Which automatically saves to localStorage)
     dispatch(
       updateSettings({
         model: formData.model,
@@ -41,38 +37,37 @@ const SettingsPage = () => {
 
     toast.success("Settings saved successfully! Cortex is now updated.", {
       style: {
-        background: "#374151",
+        background: "#18181b",
         color: "#fff",
       },
     });
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-gray-800">
+    <div className="flex-1 flex flex-col h-full bg-zinc-900">
       <div className="flex-1 overflow-y-auto p-8">
         <div className="max-w-3xl mx-auto mt-6">
-          <div className="bg-gray-800 border border-gray-700 rounded-3xl p-10 shadow-2xl">
-            <div className="flex items-center gap-4 mb-8 border-b border-gray-700 pb-8">
-              <div className="w-12 h-12 bg-linear-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+          <div className="bg-zinc-900 border border-white/10 rounded-3xl p-10 shadow-2xl">
+            <div className="flex items-center gap-4 mb-8 border-b border-white/10 pb-8">
+              <div className="w-12 h-12 bg-accent rounded-xl flex items-center justify-center shadow-lg">
                 <span className="text-2xl">⚙️</span>
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-100">
+                <h1 className="text-3xl font-bold text-neutral-50">
                   AI Settings
                 </h1>
-                <p className="text-gray-400 mt-1">
+                <p className="text-secondary-text mt-1">
                   Customize the model and behavior of Cortex.
                 </p>
               </div>
             </div>
 
             <form onSubmit={handleSave} className="space-y-8">
-              {/* MODEL SELECTION */}
               <div>
-                <label className="block text-lg font-semibold text-gray-200 mb-2">
+                <label className="block text-lg font-semibold text-neutral-50 mb-2">
                   AI Model
                 </label>
-                <p className="text-sm text-gray-400 mb-4">
+                <p className="text-sm text-secondary-text mb-4">
                   Select the language model that powers Cortex.
                 </p>
 
@@ -81,7 +76,7 @@ const SettingsPage = () => {
                     name="model"
                     value={formData.model}
                     onChange={handleChange}
-                    className="w-full bg-gray-900 border border-gray-700 rounded-xl p-4 text-white appearance-none focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                    className="w-full bg-zinc-950 border border-white/10 rounded-xl p-4 text-white appearance-none focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent cursor-pointer"
                   >
                     <option value="gemini-flash-latest">
                       Google Gemini Flash (Most Stable)
@@ -93,7 +88,7 @@ const SettingsPage = () => {
                       Groq: Llama 3.1 (Lightning Fast)
                     </option>
                   </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-secondary-text">
                     <svg
                       className="fill-current h-4 w-4"
                       xmlns="http://www.w3.org/2000/svg"
@@ -105,12 +100,11 @@ const SettingsPage = () => {
                 </div>
               </div>
 
-              {/* SYSTEM PROMPT */}
-              <div className="pt-4 border-t border-gray-700">
-                <label className="block text-lg font-semibold text-gray-200 mb-2">
+              <div className="pt-4 border-t border-white/10">
+                <label className="block text-lg font-semibold text-neutral-50 mb-2">
                   System Prompt
                 </label>
-                <p className="text-sm text-gray-400 mb-4">
+                <p className="text-sm text-secondary-text mb-4">
                   Give Cortex a specific persona, rules, or instructions. (e.g.,
                   "You are a senior developer. Only reply with Python code.")
                 </p>
@@ -120,7 +114,7 @@ const SettingsPage = () => {
                   value={formData.systemPrompt}
                   onChange={handleChange}
                   rows="5"
-                  className="w-full bg-gray-900 border border-gray-700 rounded-xl p-4 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none transition-all"
+                  className="w-full bg-zinc-950 border border-white/10 rounded-xl p-4 text-white focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent resize-none transition-all"
                   placeholder="You are Cortex..."
                 ></textarea>
               </div>
@@ -128,19 +122,18 @@ const SettingsPage = () => {
               <div className="pt-6">
                 <button
                   type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl transition-colors shadow-lg text-lg"
+                  className="w-full bg-accent hover:opacity-90 text-white font-bold py-4 px-4 rounded-xl transition-colors shadow-lg text-lg"
                 >
                   Save AI Settings
                 </button>
               </div>
             </form>
 
-            {/* LOGOUT BUTTON */}
-            <div className="mt-12 pt-8 border-t border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-200 mb-4">
+            <div className="mt-12 pt-8 border-t border-white/10">
+              <h3 className="text-lg font-semibold text-neutral-50 mb-4">
                 Account Actions
               </h3>
-              <p className="text-sm text-gray-400 mb-4">
+              <p className="text-sm text-secondary-text mb-4">
                 Securely log out of your session on this device.
               </p>
               <button

@@ -12,10 +12,9 @@ const MessageBubble = ({ msg }) => {
     <div
       className={`flex w-full gap-3 group ${msg.role === "USER" ? "justify-end" : "justify-start"}`}
     >
-      {/* AI Avatar */}
       {msg.role === "AI" && (
         <div className="shrink-0 mt-6">
-          <div className="w-10 h-10 rounded-xl bg-linear-to-br from-purple-500 to-blue-600 flex items-center justify-center shadow-md">
+          <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center shadow-md">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="22"
@@ -38,29 +37,27 @@ const MessageBubble = ({ msg }) => {
         </div>
       )}
 
-      {/* Message Content */}
       <div
         className={`flex flex-col w-full overflow-hidden ${msg.role === "USER" ? "items-end" : "items-start"}`}
       >
         <span
-          className={`text-sm font-semibold text-gray-400 mb-1 ${msg.role === "USER" ? "mr-1" : "ml-1"}`}
+          className={`text-sm font-semibold text-secondary-text mb-1 ${msg.role === "USER" ? "mr-1" : "ml-1"}`}
         >
           {msg.role === "USER" ? "You" : "Cortex AI"}
         </span>
 
-        {/* 3 Dots Loading Animation */}
         {msg.role === "AI" &&
         msg._id.startsWith("ai-") &&
         msg.content === "" ? (
-          <div className="w-32 p-4 rounded-2xl shadow-md bg-gray-700 text-gray-200 rounded-tl-none flex items-center justify-center gap-1 h-[56px]">
-            <div className="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div>
-            <div className="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div>
-            <div className="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div>
+          <div className="w-32 p-4 rounded-2xl shadow-md bg-zinc-800 text-neutral-50 rounded-tl-none flex items-center justify-center gap-1 h-[56px]">
+            <div className="w-2 h-2 bg-secondary-text rounded-full typing-dot"></div>
+            <div className="w-2 h-2 bg-secondary-text rounded-full typing-dot"></div>
+            <div className="w-2 h-2 bg-secondary-text rounded-full typing-dot"></div>
           </div>
         ) : (
           <>
             <div
-              className={`max-w-xl w-full p-4 rounded-2xl shadow-md text-[15px] leading-relaxed overflow-x-auto ${msg.role === "USER" ? "bg-indigo-900/60 text-indigo-50 border border-indigo-700/50 rounded-tr-none backdrop-blur-sm" : "bg-gray-700 text-gray-200 rounded-tl-none"}`}
+              className={`max-w-xl w-full p-4 rounded-2xl shadow-md text-[15px] leading-relaxed overflow-x-auto ${msg.role === "USER" ? "bg-accent/20 text-neutral-50 border border-accent/40 rounded-tr-none backdrop-blur-sm" : "bg-zinc-800 text-neutral-50 rounded-tl-none"}`}
             >
               <div className="prose prose-invert max-w-none w-full">
                 <ReactMarkdown
@@ -79,7 +76,7 @@ const MessageBubble = ({ msg }) => {
                       }
                       return (
                         <code
-                          className="bg-gray-900/60 text-blue-300 px-1.5 py-0.5 rounded-md font-mono text-sm border border-gray-700/50"
+                          className="bg-zinc-950/60 text-accent px-1.5 py-0.5 rounded-md font-mono text-sm border border-white/10"
                           {...props}
                         >
                           {children}
@@ -93,7 +90,6 @@ const MessageBubble = ({ msg }) => {
               </div>
             </div>
 
-            {/* Action Toolbar (Appears on Hover) */}
             {msg.content && (
               <div
                 className={`mt-1.5 flex w-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${msg.role === "USER" ? "justify-end" : "justify-start"}`}
@@ -102,10 +98,10 @@ const MessageBubble = ({ msg }) => {
                   onClick={() => {
                     navigator.clipboard.writeText(msg.content);
                     toast.success("Message copied!", {
-                      style: { background: "#374151", color: "#fff" },
+                      style: { background: "#18181b", color: "#fff" },
                     });
                   }}
-                  className="flex items-center gap-1.5 text-[11px] font-medium text-gray-400 hover:text-gray-200 transition-colors bg-gray-800/80 hover:bg-gray-700 px-2 py-1 rounded border border-gray-700 shadow-sm"
+                  className="flex items-center gap-1.5 text-[11px] font-medium text-secondary-text hover:text-neutral-50 transition-colors bg-zinc-900/80 hover:bg-zinc-800 px-2 py-1 rounded border border-white/10 shadow-sm"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -136,11 +132,10 @@ const MessageBubble = ({ msg }) => {
         )}
       </div>
 
-      {/* User Avatar */}
       {msg.role === "USER" && (
         <div className="shrink-0 mt-6">
           <img
-            src="https://ui-avatars.com/api/?name=User&background=2563eb&color=fff"
+            src="https://ui-avatars.com/api/?name=User&background=155dfc&color=fff"
             alt="User"
             className="w-10 h-10 rounded-full shadow-md"
           />
@@ -150,5 +145,4 @@ const MessageBubble = ({ msg }) => {
   );
 };
 
-// THIS IS THE PERFORMANCE MAGIC!
 export default React.memo(MessageBubble);

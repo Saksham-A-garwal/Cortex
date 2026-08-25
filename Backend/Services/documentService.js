@@ -1,7 +1,11 @@
 const { PDFParse } = require("pdf-parse");
 
 const extractText = async (file) => {
-  if (file.mimetype === "text/plain") {
+  const type = file.detectedMimeType;
+  if (!type) {
+    throw new Error("File type was not verified before extraction.");
+  }
+  if (type === "text/plain") {
     return file.buffer.toString("utf8");
   }
   const parser = new PDFParse({ data: file.buffer });
@@ -10,8 +14,7 @@ const extractText = async (file) => {
     return result.text;
   } finally {
     await parser.destroy();
-  } 
+  }
 };
-
 
 module.exports = { extractText };

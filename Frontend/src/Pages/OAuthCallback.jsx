@@ -1,49 +1,38 @@
-import { useEffect, useContext } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useContext, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../Context/AuthContext";
+import { refreshSession } from "../api/client";
 import toast from "react-hot-toast";
-import axios from "axios";
 
 const OAuthCallback = () => {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { setToken, setUser } = useContext(AuthContext);
 
+  const ran = useRef(false);
+
   useEffect(() => {
-    // 1. Grab the token from the URL query string
-    const token = searchParams.get("token");
+    if (ran.current) return;
+    ran.current = true;
 
-    if (token) {
-      // 2. Save the token to Context/LocalStorage
-      setToken(token);
+    refreshSession()
+      .then((token) => {
+        setToken(token);
+        toast.success("Successfully logged in!", { id: "oauth-login" });
+        navigate("/", { replace: true });
+      })
+      .catch(() => {
+        setToken(null);
+        setUser(null);
+        toast.error("Authentication failed");
+        navigate("/login", { replace: true });
+      });
+  }, [navigate, setToken, setUser]);
 
-      // 3. Fetch the user's profile data using the new token
-      axios
-        .get(`${import.meta.env.VITE_API_URL}/api/users/profile`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        .then((response) => {
-          setUser(response.data);
-          toast.success("Successfully logged in!", { id: "oauth-login" });
-          navigate("/"); // Teleport to home!
-        })
-        .catch((err) => {
-          console.error("Failed to fetch user:", err);
-          toast.error("Failed to fetch profile");
-          navigate("/login");
-        });
-    } else {
-      toast.error("Authentication failed");
-      navigate("/login");
-    }
-  }, [searchParams, navigate, setToken, setUser]);
-
-  // Show a loading screen while it processes the token
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
+    <div className="flex items-center justify-center h-screen bg-zinc-950 text-white">
       <div className="flex flex-col items-center gap-4">
         <svg
-          className="animate-spin h-10 w-10 text-blue-500"
+          className="animate-spin h-10 w-10 text-accent"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"

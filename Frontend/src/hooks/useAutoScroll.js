@@ -7,7 +7,7 @@ export const useAutoScroll = (dependencies) => {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, dependencies); // It will run whenever the dependencies array changes!
+  }, dependencies); 
 
   return scrollRef;
 };

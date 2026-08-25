@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import { api } from "../api/client";
 import { useDispatch } from "react-redux";
 import { setChats } from "../Store/chatslice";
-import { useAuth } from "./useAuth"; // Notice how we use our other custom hook inside here!
+import { useAuth } from "./useAuth";
 
 export const useChats = () => {
   const dispatch = useDispatch();
@@ -16,14 +16,10 @@ export const useChats = () => {
       setIsLoading(true);
 
       try {
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/chats`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
+        const response = await api.get(
+          `/api/chats`
         );
 
-        // Push the fresh database data into the Redux Cloud
         dispatch(setChats(response.data.chats));
       } catch (error) {
         console.error("Error occurred while getting the chats", error);

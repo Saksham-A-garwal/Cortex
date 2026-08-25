@@ -3,9 +3,6 @@ const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const GitHubStrategy = require("passport-github2").Strategy;
 const UserModel = require("../Model/UserModel");
 
-// ==========================================
-// 1. GOOGLE STRATEGY
-// ==========================================
 if (process.env.GOOGLE_CLIENT_ID) {
   passport.use(
     new GoogleStrategy(
@@ -13,17 +10,15 @@ if (process.env.GOOGLE_CLIENT_ID) {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
         callbackURL: "/api/auth/google/callback",
-        proxy: true, // Crucial for Vercel/Render deployments!
+        proxy: true, 
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
           const email = profile.emails && profile.emails[0].value;
 
-          // Check if this email already exists in our database
           let user = await UserModel.findOne({ email: email });
 
           if (user) {
-            // If they exist, but don't have a googleId, attach it!
             if (!user.googleId) {
               user.googleId = profile.id;
               await user.save();
@@ -31,7 +26,6 @@ if (process.env.GOOGLE_CLIENT_ID) {
             return done(null, user);
           }
 
-          // If they don't exist, create a brand new account!
           user = await UserModel.create({
             fullname: profile.displayName || "Google User",
             email: email,
@@ -48,9 +42,6 @@ if (process.env.GOOGLE_CLIENT_ID) {
   );
 }
 
-// ==========================================
-// 2. GITHUB STRATEGY
-// ==========================================
 if (process.env.GITHUB_CLIENT_ID) {
   passport.use(
     new GitHubStrategy(
@@ -58,14 +49,13 @@ if (process.env.GITHUB_CLIENT_ID) {
         clientID: process.env.GITHUB_CLIENT_ID,
         clientSecret: process.env.GITHUB_CLIENT_SECRET,
         callbackURL: "/api/auth/github/callback",
-        scope: ["user:email"], // We specifically ask GitHub for their email
+        scope: ["user:email"], 
         proxy: true,
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
           let email = profile.emails && profile.emails.length > 0 ? profile.emails[0].value : null;
           
-          // If GitHub doesn't give us an email (e.g. privacy settings), generate a dummy one
           if (!email) {
             email = `${profile.username}@github.com`;
           }
@@ -96,7 +86,6 @@ if (process.env.GITHUB_CLIENT_ID) {
   );
 }
 
-// These two functions are required by Passport to keep the connection alive during the redirect
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user, done) => done(null, user));
 

@@ -3,9 +3,12 @@ import { AuthContext } from "../Context/AuthContext";
 import { useContext } from "react";
 
 const ProtectedRoute = () => {
-  const { token } = useContext(AuthContext);
+  const { token, bootstrapped } = useContext(AuthContext);
 
-  // 2. Return the <Navigate /> component!
+  if (!bootstrapped) {
+    return <div className="min-h-screen bg-zinc-950" />;
+  }
+
   if (!token) {
     return <Navigate to="/Login" replace />;
   }

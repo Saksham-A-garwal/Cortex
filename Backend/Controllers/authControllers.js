@@ -1,86 +1,166 @@
 const UserModel = require("../Model/UserModel");
-const bcrypt = require("bcrypt");
-const {setUser} = require("../Services/authServices")
+const { sendError } = require("../utils/apiError");
+const { createOtpForEmail, verifyOtp } = require("../Services/otpService");
+const { sendOtpEmail } = require("../Services/emailService");
+const {
+  REFRESH_COOKIE_NAME,
+  issueTokenPair,
+  rotateRefreshToken,
+  revokeRefreshToken,
+  issueAccessToken,
+  refreshCookieOptions,
+} = require("../Services/tokenService");
 
-const handleCreateUser = async (req, res) => {
-  const { fullname, email, password } = req.body;
-  if (!fullname || !email || !password)
-    return res.status(400).json({ msg: "All fields are required" });
+const OTP_NEUTRAL_RESPONSE = {
+  message: "Check your email for a 6-digit code.",
+};
 
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-  if (!emailRegex.test(email))
-    return res.status(400).json({ msg: "Provide the Valid email" });
+const displayNameFromEmail = (email) => {
+  const localPart = String(email).split("@")[0] || "there";
+  return localPart.slice(0, 100);
+};
 
-  const saltRounds = 12;
-  const hashPassword = await bcrypt.hash(password, saltRounds);
+const sendTokenPair = (res, { accessToken, refreshToken }, extra = {}) => {
+  res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions());
+  return res.status(200).json({ accessToken, ...extra });
+};
+
+const handleOAuthCallback = async (req, res) => {
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
 
   try {
-    await UserModel.create({
-      fullname: fullname,
-      email: email,
-      password: hashPassword,
-    });
-
-    return res.status(201).json({ msg: "New User Created Successfully" });
+    const pair = await issueTokenPair(req.user);
+    res.cookie(REFRESH_COOKIE_NAME, pair.refreshToken, refreshCookieOptions());
+    return res.redirect(`${frontendUrl}/oauth-callback`);
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({ msg: "Email already exists. Please login instead." });
-    }
-    console.error("Signup error:", error);
-    return res.status(500).json({ msg: "Failed to create account. Please try again later." });
+    console.error("OAuth callback failed:", error.message);
+    return res.redirect(`${frontendUrl}/login?error=oauth_failed`);
   }
 };
 
-const handleLoginUser = async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password)
-    return res.status(400).json({ msg: "All fields are required" });
+const handleOtpRequest = async (req, res) => {
+  const { email } = req.body;
 
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-  if (!emailRegex.test(email))
-    return res.status(400).json({ msg: "Provide a valid email" });
+  try {
+    const { code, expiresInMinutes } = await createOtpForEmail(email);
+    const result = await sendOtpEmail({ to: email, code, expiresInMinutes });
 
-  // BUG 2 FIX: Use findOne and await
-  const User = await UserModel.findOne({ email: email });
+    if (result.sent) {
+      console.info("OTP email dispatched for a sign-in request.");
+    } else {
+      console.error(`OTP email not delivered (${result.reason}) for a sign-in request.`);
+    }
 
-  // BUG 3 FIX: Check if user actually exists before comparing passwords
-  if (!User) {
-    return res.status(401).json({ msg: "Invalid email or password" });
+    return res.status(200).json(OTP_NEUTRAL_RESPONSE);
+  } catch (error) {
+    console.error("OTP request failed:", error.message);
+    return res.status(200).json(OTP_NEUTRAL_RESPONSE);
+  }
+};
+
+const handleOtpVerify = async (req, res) => {
+  const { email, code } = req.body;
+
+  const result = await verifyOtp(email, code);
+
+  if (result.status === "no_code") {
+    return sendError(res, 400, "NO_PENDING_CODE", "Request a new code to sign in.");
+  }
+  if (result.status === "expired") {
+    return sendError(res, 400, "CODE_EXPIRED", "That code has expired. Request a new one.");
+  }
+  if (result.status === "locked") {
+    return sendError(
+      res,
+      400,
+      "CODE_LOCKED",
+      "Too many incorrect attempts. Request a new code to try again.",
+    );
+  }
+  if (result.status === "wrong") {
+    const left = result.attemptsRemaining;
+    return sendError(
+      res,
+      400,
+      "CODE_INCORRECT",
+      `Incorrect code. ${left} attempt${left === 1 ? "" : "s"} remaining.`,
+    );
   }
 
-  // OAUTH SAFEGUARD: Check if they signed up with Google/GitHub and don't have a password
-  if (!User.password) {
-    const providerStr = User.authProvider === "google" ? "Google" : "GitHub";
-    return res.status(400).json({ msg: `You signed up with ${providerStr}. Please use the "Continue with ${providerStr}" button.` });
-  }
+  const user = await UserModel.findOneAndUpdate(
+    { email },
+    {
+      $setOnInsert: {
+        email,
+        fullname: displayNameFromEmail(email),
+        authProvider: "email",
+      },
+    },
+    { returnDocument: "after", upsert: true, setDefaultsOnInsert: true },
+  );
 
-  const VerifyPassword = await bcrypt.compare(password, User.password);
-
-  if (!VerifyPassword) {
-    return res.status(401).json({ msg: "Invalid email or password" });
-  }
-
-  const token = setUser(User);
-
-  // BUG 4 FIX: Send token in JSON so React can easily grab it
-  return res.status(200).json({
-    msg: "Login Successful",
-    token: token,
-    user: { fullname: User.fullname, email: User.email },
+  const pair = await issueTokenPair(user);
+  return sendTokenPair(res, pair, {
+    user: { _id: user._id, fullname: user.fullname, email: user.email },
   });
 };
 
-const handleOAuthCallback = (req, res) => {
-  // 1. Generate the standard JWT token
-  const token = setUser(req.user);
+const handleRefresh = async (req, res) => {
+  const rawToken = req.cookies?.[REFRESH_COOKIE_NAME];
 
-  // 2. Redirect back to React, hiding the token in the URL
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-  res.redirect(`${frontendUrl}/oauth-callback?token=${token}`);
+  if (!rawToken) {
+    return sendError(res, 401, "NO_REFRESH_TOKEN", "Not signed in.");
+  }
+
+  const result = await rotateRefreshToken(rawToken);
+
+  if (result.status === "reuse_detected") {
+    console.warn(
+      `Refresh token reuse detected for user ${result.userId}. Revoked ${result.revokedCount} session(s).`,
+    );
+    res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieOptions());
+    return sendError(
+      res,
+      401,
+      "SESSION_REVOKED",
+      "Your session was ended for security reasons. Please sign in again.",
+    );
+  }
+
+  if (result.status === "race") {
+    return sendError(res, 409, "REFRESH_IN_PROGRESS", "Please retry.");
+  }
+
+  if (result.status !== "ok") {
+    res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieOptions());
+    return sendError(res, 401, "INVALID_REFRESH_TOKEN", "Please sign in again.");
+  }
+
+  const user = await UserModel.findById(result.userId);
+  if (!user) {
+    res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieOptions());
+    return sendError(res, 401, "UNAUTHENTICATED", "Please sign in again.");
+  }
+
+  return sendTokenPair(
+    res,
+    { accessToken: issueAccessToken(user), refreshToken: result.refreshToken },
+    { user: { _id: user._id, fullname: user.fullname, email: user.email } },
+  );
+};
+
+const handleLogout = async (req, res) => {
+  const rawToken = req.cookies?.[REFRESH_COOKIE_NAME];
+  if (rawToken) await revokeRefreshToken(rawToken);
+
+  res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieOptions());
+  return res.status(200).json({ message: "Signed out." });
 };
 
 module.exports = {
-  handleCreateUser,
-  handleLoginUser,
-  handleOAuthCallback
+  handleOAuthCallback,
+  handleOtpRequest,
+  handleOtpVerify,
+  handleRefresh,
+  handleLogout,
 };

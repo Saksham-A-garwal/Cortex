@@ -10,13 +10,9 @@ const UserSchema = new mongoose.Schema({
     required: true,
     unique : true,
   },
-  password: {
-    type: String,
-    required: false, // Made optional because OAuth users don't have passwords
-  },
   googleId: {
     type: String,
-    sparse: true, // Allows null/missing values to not conflict with unique index if added
+    sparse: true,
   },
   githubId: {
     type: String,
@@ -24,8 +20,8 @@ const UserSchema = new mongoose.Schema({
   },
   authProvider: {
     type: String,
-    enum: ["local", "google", "github"],
-    default: "local",
+    enum: ["local", "google", "github", "email"],
+    default: "email",
   },
   role : {
     type : String,
@@ -33,6 +29,6 @@ const UserSchema = new mongoose.Schema({
   }
 }, {timestamps : true});
 
-const UserModel = mongoose.model("User" , UserSchema);
+const UserModel = mongoose.models.User || mongoose.model("User" , UserSchema);
 
 module.exports =  UserModel;

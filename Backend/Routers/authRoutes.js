@@ -1,48 +1,62 @@
 const express = require("express");
 const Router = express.Router();
 const passport = require("passport");
+
+const { validate } = require("../middleware/validate");
+const { otpRequestSchema, otpVerifySchema } = require("../Validation/schemas");
+const { otpRequestRateLimit } = require("../middleware/otpRateLimit");
 const {
-  handleCreateUser,
-  handleLoginUser,
   handleOAuthCallback,
+  handleOtpRequest,
+  handleOtpVerify,
+  handleRefresh,
+  handleLogout,
 } = require("../Controllers/authControllers");
 
-// Standard Auth
-Router.post("/SignUp", handleCreateUser);
-Router.post("/Login", handleLoginUser);
+const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5174";
 
-// ==========================================
-// GOOGLE OAUTH ROUTES
-// ==========================================
-Router.get(
-  "/google",
-  passport.authenticate("google", { scope: ["profile", "email"] }),
+Router.post(
+  "/otp/request",
+  validate({ body: otpRequestSchema }),
+  otpRequestRateLimit,
+  handleOtpRequest,
 );
 
-const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+Router.post(
+  "/otp/verify",
+  validate({ body: otpVerifySchema }),
+  handleOtpVerify,
+);
+
+Router.post("/refresh", handleRefresh);
+Router.post("/logout", handleLogout);
+
+Router.get(
+  "/google",
+  passport.authenticate("google", { scope: ["profile", "email"], state: true }),
+);
 
 Router.get(
   "/google/callback",
   passport.authenticate("google", {
-    failureRedirect: `${frontendUrl}/login`,
+    failureRedirect: `${frontendUrl}/login?error=oauth_failed`,
+    session: false,
   }),
-  handleOAuthCallback, 
+  handleOAuthCallback,
 );
 
-// ==========================================
-// GITHUB OAUTH ROUTES
-// ==========================================
 Router.get(
   "/github",
-  passport.authenticate("github", { scope: ["user:email"] }),
+  passport.authenticate("github", { scope: ["user:email"], state: true }),
 );
 
 Router.get(
   "/github/callback",
   passport.authenticate("github", {
-    failureRedirect: `${frontendUrl}/login`,
+    failureRedirect: `${frontendUrl}/login?error=oauth_failed`,
+    session: false,
   }),
-  handleOAuthCallback, 
+  handleOAuthCallback,
 );
 
 module.exports = Router;

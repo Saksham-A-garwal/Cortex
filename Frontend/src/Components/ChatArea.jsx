@@ -1,22 +1,41 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import ChatInput from "./ChatInput";
-import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
+import { api, getAccessToken, refreshSession } from "../api/client";
 import { useDispatch, useSelector } from "react-redux";
 import { updateChatTitle, addChat } from "../Store/chatslice";
 
-// Custom Hooks
 import { useAuth } from "../hooks/useAuth";
 import { useAutoScroll } from "../hooks/useAutoScroll";
 
-// 🚀 NEW: Import our clean UI components!
 import WelcomeScreen from "./WelcomeScreen";
 import MessageBubble from "./MessageBubble";
+import { getApiErrorMessage } from "../utils/apiError";
+
+const isTokenNearExpiry = (token, secondsOfSlack = 60) => {
+  if (!token) return true;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    if (!payload.exp) return true;
+    return payload.exp * 1000 - Date.now() < secondsOfSlack * 1000;
+  } catch {
+    return true;
+  }
+};
 
 const ChatArea = () => {
   const { chatId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const [prefillMessage, setPrefillMessage] = useState(null);
+  useEffect(() => {
+    if (location.state?.prefillMessage) {
+      setPrefillMessage(location.state.prefillMessage);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, navigate]);
 
   const { token } = useAuth();
   const dispatch = useDispatch();
@@ -30,25 +49,50 @@ const ChatArea = () => {
 
   const endOfMessagesRef = useAutoScroll([message, isLoading, error]);
 
+  const loadMessages = useCallback(async (id) => {
+    try {
+      const response = await api.get(`/api/messages/${id}`);
+      setmessage(response.data.messages);
+    } catch (err) {
+      console.log("Error Occured while fetching messages", err);
+    }
+  }, []);
+
   useEffect(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setIsLoading(false);
+    }
+
     if (!chatId) {
-      setmessage([]); // Clear screen when navigating to "New Chat"
+      setmessage([]);
       return;
     }
 
+    let cancelled = false;
+
     const fetchmessages = async () => {
       try {
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/messages/${chatId}`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
-        setmessage(response.data.messages);
+        const response = await api.get(`/api/messages/${chatId}`);
+        if (!cancelled) setmessage(response.data.messages);
       } catch (error) {
-        console.log("Error Occured while fetching messages", error);
+        if (!cancelled) console.log("Error Occured while fetching messages", error);
       }
     };
     fetchmessages();
+
+    return () => {
+      cancelled = true;
+    };
   }, [chatId, token]);
+
+  useEffect(
+    () => () => {
+      abortControllerRef.current?.abort();
+    },
+    [],
+  );
 
   const handleStopGenerating = () => {
     if (abortControllerRef.current) {
@@ -70,6 +114,8 @@ const ChatArea = () => {
 
     let activeChatId = chatId;
 
+    let failedIntoChat = null;
+
     const tempUserMsg = {
       _id: Date.now().toString(),
       content: text,
@@ -84,11 +130,21 @@ const ChatArea = () => {
     setError(null);
 
     try {
+      let streamToken = getAccessToken();
+      if (isTokenNearExpiry(streamToken)) {
+        try {
+          streamToken = await refreshSession();
+        } catch {
+        }
+      }
+
+      const streamController = abortControllerRef.current;
+
       await fetchEventSource(`${import.meta.env.VITE_API_URL}/api/messages`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${streamToken}`,
         },
         body: JSON.stringify({
           content: text,
@@ -99,14 +155,42 @@ const ChatArea = () => {
 
         signal: abortControllerRef.current.signal,
 
-        onmessage(event) {
+        async onopen(response) {
+          const contentType = response.headers.get("content-type") || "";
+          if (response.ok && contentType.includes("text/event-stream")) return;
+
+          if (response.status === 401) {
+            throw new Error("Your session expired. Please sign in again.");
+          }
+
+          let detail = "";
           try {
-            const parsedData = JSON.parse(event.data);
+            const body = await response.json();
+            detail = getApiErrorMessage({ response: { data: body } }, "");
+            if (body?.newChat) failedIntoChat = { newChat: body.newChat };
+          } catch {
+            detail = "";
+          }
+          throw new Error(detail || `The server couldn't start the response (${response.status}).`);
+        },
 
-            if (parsedData.error) {
-              throw new Error(parsedData.error);
-            }
+        onmessage(event) {
+          if (streamController?.signal.aborted) return;
 
+          let parsedData;
+          try {
+            parsedData = JSON.parse(event.data);
+          } catch {
+            console.error("Failed to parse event:", event.data);
+            return;
+          }
+
+          if (parsedData.error) {
+            if (parsedData.newChat) failedIntoChat = { newChat: parsedData.newChat };
+            throw new Error(parsedData.error);
+          }
+
+          try {
             if (parsedData.chunk) {
               setmessage((prev) =>
                 prev.map((msg) =>
@@ -124,7 +208,16 @@ const ChatArea = () => {
                 ),
               );
 
-              if (parsedData.newTitle) {
+              if (parsedData.newChat && !chatId) {
+                dispatch(
+                  addChat(
+                    parsedData.newTitle
+                      ? { ...parsedData.newChat, title: parsedData.newTitle }
+                      : parsedData.newChat,
+                  ),
+                );
+                navigate(`/chat/${parsedData.newChat._id}`);
+              } else if (parsedData.newTitle) {
                 dispatch(
                   updateChatTitle({
                     chatId: parsedData.newChat?._id || activeChatId,
@@ -132,13 +225,7 @@ const ChatArea = () => {
                   }),
                 );
               }
-              
-              if (parsedData.newChat && !chatId) {
-                dispatch(addChat(parsedData.newChat));
-                navigate(`/chat/${parsedData.newChat._id}`);
-              }
 
-              // CRITICAL FIX: Prevent fetchEventSource from auto-retrying
               abortControllerRef.current?.abort();
             }
           } catch {
@@ -154,12 +241,20 @@ const ChatArea = () => {
         console.log("Generation successfully stopped by the user.");
       } else {
         console.error("Message send error:", err);
-        setError({ text });
         setmessage((prev) =>
           prev.filter(
             (m) => m._id !== tempUserMsg._id && m._id !== tempAiMsgId,
           ),
         );
+
+        if (!chatId && failedIntoChat?.newChat) {
+          dispatch(addChat(failedIntoChat.newChat));
+          navigate(`/chat/${failedIntoChat.newChat._id}`);
+        } else if (chatId) {
+          await loadMessages(chatId);
+        } else {
+          setError({ text, reason: err?.message });
+        }
       }
     } finally {
       setIsLoading(false);
@@ -173,24 +268,22 @@ const ChatArea = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-gray-800">
-      <div className="flex-1 overflow-y-auto no-scrollbar p-4 text-gray-200">
+    <div className="flex-1 flex flex-col h-full bg-zinc-900">
+      <div className="flex-1 overflow-y-auto no-scrollbar p-4 text-neutral-50">
         <div className="max-w-4xl mx-auto flex flex-col text-left h-full">
-          {/* 🚀 LOOK AT HOW CLEAN THIS IS NOW! */}
           {message.length === 0 && !isLoading ? (
             <WelcomeScreen />
           ) : (
             <div className="flex flex-col gap-8 py-8 h-full">
               <div className="max-w-4xl mx-auto flex flex-col gap-6 py-6 w-full">
-                {/* 🚀 AND LOOK AT HOW CLEAN THIS LOOP IS NOW! */}
                 {message.map((msg) => (
                   <MessageBubble key={msg._id} msg={msg} />
                 ))}
 
                 {error && (
                   <div className="flex flex-col items-center justify-center p-4 bg-red-900/50 border border-red-500 rounded-xl mt-4 mx-auto max-w-lg">
-                    <span className="text-red-200 font-semibold mb-2">
-                      Failed to reach the AI server.
+                    <span className="text-red-200 font-semibold mb-2 text-center">
+                      {error.reason || "Failed to reach the AI server."}
                     </span>
                     <button
                       onClick={handleRetry}
@@ -212,7 +305,7 @@ const ChatArea = () => {
         <div className="flex justify-center -mb-2 z-10 relative">
           <button
             onClick={handleStopGenerating}
-            className="flex items-center gap-2 bg-gray-700 hover:bg-red-600 text-gray-300 hover:text-white px-4 py-2 rounded-full text-sm font-semibold border border-gray-600 hover:border-red-500 transition-all shadow-lg"
+            className="flex items-center gap-2 bg-zinc-900 hover:bg-red-600 text-secondary-text hover:text-white px-4 py-2 rounded-full text-sm font-semibold border border-white/10 hover:border-red-500 transition-all shadow-lg"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -232,7 +325,7 @@ const ChatArea = () => {
         </div>
       )}
 
-      <ChatInput onSubmit={handleSendMessage} isLoading={isLoading} />
+      <ChatInput onSubmit={handleSendMessage} isLoading={isLoading} initialText={prefillMessage} />
     </div>
   );
 };

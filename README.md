@@ -41,15 +41,15 @@
 
 ## Overview
 
-Cortex is a full-stack AI workspace where every request is routed through a **LangGraph-based multi-agent graph** rather than handled by a single general-purpose model. A lightweight router classifies each incoming message and dispatches it to the specialist agent best equipped to handle it — general conversation, code generation, live web search, or retrieval-augmented document Q&A — so each task is served by a model and pipeline sized to its complexity.
+Cortex is a full-stack AI workspace built around a single **LangGraph tool-calling orchestrator** rather than a fixed router-to-specialist pipeline. One agent holds the conversation and decides, per turn, which of its tools to reach for — live web search, page reading, document retrieval, or code generation — so a simple question and a multi-step research task both get handled by the same agent without a rigid up-front classification step.
 
 With Cortex, users can:
 
-- **Converse** with a general-purpose conversational agent.
-- **Upload PDF or plain-text documents**, have them chunked and embedded, and ask context-aware questions grounded in that content (RAG).
-- **Generate, debug, and refactor code** through a dedicated coding agent.
-- **Run live web searches** for up-to-date, real-world information via Tavily.
-- **Authenticate securely** using email/password or Google/GitHub OAuth 2.0.
+- **Converse naturally**, with the agent calling tools only when a question actually needs them.
+- **Upload PDF or plain-text documents**, have them chunked and embedded, and ask context-aware questions grounded in that content (RAG) — plus browse, search, and preview everything they've uploaded from a dedicated Library.
+- **Get code written by a specialized coding model**, routed there automatically rather than handled by the general conversational model.
+- **Run live web searches and read specific pages** for up-to-date, real-world information via Tavily.
+- **Sign in without a password** — email one-time codes or Google/GitHub OAuth, both backed by short-lived access tokens and rotating, revocable refresh tokens.
 
 **[→ Try the live demo](http://cortex-developersaksham.vercel.app/)**
 
@@ -59,15 +59,16 @@ With Cortex, users can:
 
 | Feature | Description |
 |---|---|
-| **Multi-agent architecture** | A router agent classifies each message and dispatches it to a General, Coding, Search, or RAG agent via LangGraph |
-| **Cost/latency-aware model selection** | Each agent uses a model sized to its task — a fast/cheap model for routing, stronger reasoning models for coding and RAG |
-| **OAuth 2.0 authentication** | Google and GitHub sign-in via Passport, alongside standard email/password auth |
-| **Real-time streaming** | Responses stream token-by-token over Server-Sent Events instead of returning as a single blob |
+| **Tool-calling agent architecture** | A single LangGraph orchestrator decides per-turn which tools to invoke, bounded by a configurable per-turn tool-call budget so one open-ended question can't loop indefinitely |
+| **Five agent tools** | `web_search`, `read_url` (via Tavily Extract, not a raw server-side fetch — closes an SSRF path), `search_my_documents` / `list_my_documents` (RAG), and `write_code` (hands coding work to a dedicated model rather than the general one) |
+| **Passwordless authentication** | Email one-time codes (6-digit, rate-limited, Redis-backed) or Google/GitHub OAuth — no password field anywhere in the product |
+| **Short-lived access + rotating refresh tokens** | Access tokens are unrevocable by design and expire quickly; refresh tokens are long-lived but tracked and revocable, with reuse detection |
+| **Real-time streaming** | Responses stream token-by-token over Server-Sent Events; a failed generation still saves a real, specific reply (including a distinct message when the LLM provider is out of credits) instead of leaving the conversation stuck |
 | **Retrieval-Augmented Generation (RAG)** | PDF/TXT ingestion → chunking → embeddings → Qdrant vector store, fully scoped per user |
 | **Query reformulation** | Before retrieval, an LLM rewrites vague prompts (e.g. *"summarize this"*) into a precise vector-search query using the user's recent uploads as context |
 | **Graceful RAG fallback** | Automatically falls back to an in-memory keyword retriever if Qdrant or embedding credentials aren't configured, so local development works out of the box |
-| **File upload & preview** | Uploaded PDFs appear as interactive chips with an in-app preview modal |
-| **Chat history filter** | Sidebar search modal filters chats already loaded on the client |
+| **Library** | A single hub for every document uploaded — searchable, previewable (PDF/text rendered inline, not just a filename), and downloadable |
+| **Automated test suite** | Unit and integration tests over hardening rules, the auth flow, and generation-failure handling, run with Node's built-in test runner |
 | **Streamlined install** | `.npmrc` sets `legacy-peer-deps=true` to avoid LangChain peer-dependency conflicts |
 
 ---
@@ -76,24 +77,11 @@ With Cortex, users can:
 
 ### Authentication
 
-<table>
-<tr>
-<td width="50%">
+<img src="./assets/01-login.png" alt="Cortex sign-in screen with email OTP and OAuth options" width="100%">
 
-**Sign In**
-<img src="./assets/01-login.png" alt="Cortex login page with email/password and OAuth options" width="100%">
+> This screenshot predates the passwordless rework — the current screen has no password field. Email one-time codes and Google/GitHub OAuth are both supported on a single auth screen, and verifying a code creates the account on first use, so there's no separate sign-up flow.
 
-</td>
-<td width="50%">
-
-**Sign Up**
-<img src="./assets/02-signup.png" alt="Cortex signup page for creating a new account" width="100%">
-
-</td>
-</tr>
-</table>
-
-Email/password and Google/GitHub OAuth 2.0 are both supported on a single, unified auth screen.
+Email OTP and Google/GitHub OAuth 2.0 are both supported on a single, unified auth screen — there is no password anywhere in the product.
 
 ### Workspace Home
 
@@ -103,15 +91,15 @@ The landing view inside the workspace, with quick-start prompts and the persiste
 
 ### General Conversation
 
-<img src="./assets/04-chat-general.png" alt="General agent answering a REST vs GraphQL comparison with a formatted table" width="100%">
+<img src="./assets/04-chat-general.png" alt="Cortex answering a REST vs GraphQL comparison with a formatted table" width="100%">
 
-The **General agent** handling an open-ended question, rendered with full markdown support — headings, bold text, and comparison tables.
+The orchestrator answering an open-ended question directly, with no tool calls needed, rendered with full markdown support — headings, bold text, and comparison tables.
 
 ### Coding Agent
 
-<img src="./assets/05-coding-agent.png" alt="Coding agent generating a Python palindrome-checker function with syntax highlighting" width="100%">
+<img src="./assets/05-coding-agent.png" alt="write_code tool generating a Python palindrome-checker function with syntax highlighting" width="100%">
 
-The **Coding agent** generating a syntax-highlighted, documented Python function, with a copy-to-clipboard action on the code block.
+The `write_code` tool generating a syntax-highlighted, documented Python function via a dedicated coding model, with a copy-to-clipboard action on the code block.
 
 ### Retrieval-Augmented Generation (RAG)
 
@@ -119,15 +107,15 @@ The **Coding agent** generating a syntax-highlighted, documented Python function
 <img src="./assets/06-rag-upload.png" alt="PDF uploaded and indexed, ready for document questions" width="100%">
 
 **2. Grounded Answer**
-<img src="./assets/08-rag-answer.png" alt="RAG agent summarizing an uploaded PDF's key points" width="100%">
+<img src="./assets/08-rag-answer.png" alt="Cortex summarizing an uploaded PDF's key points via search_my_documents" width="100%">
 
-A PDF is uploaded, chunked, and embedded into Qdrant. The **RAG agent** then reformulates the user's question, retrieves the most relevant chunks scoped to that document, and returns an answer grounded in its actual content.
+A PDF is uploaded, chunked, and embedded into Qdrant. The `search_my_documents` tool then reformulates the user's question, retrieves the most relevant chunks scoped to that document, and the orchestrator returns an answer grounded in its actual content.
 
 ### Live Web Search
 
-<img src="./assets/09-search-agent.png" alt="Search agent answering a question about the latest React release using Tavily" width="100%">
+<img src="./assets/09-search-agent.png" alt="The orchestrator answering a question about the latest React release using the web_search tool" width="100%">
 
-The **Search agent** calling the Tavily tool for current, real-world information and summarizing the results back to the user.
+The orchestrator calling `web_search` for current, real-world information and summarizing the results back to the user.
 
 ### Chat History Search
 
@@ -142,25 +130,27 @@ The sidebar's search modal filters conversations already loaded in client state 
 ### Agent Orchestration
 
 ```
-                        ┌──────────────┐
-   User message ──────► │  Router Node │
-                        └──────┬───────┘
-                               │ classifies intent
-              ┌────────────────┼────────────────┬───────────────┐
-              ▼                ▼                 ▼               ▼
-        ┌───────────┐   ┌────────────┐    ┌────────────┐  ┌─────────────┐
-        │  General  │   │   Coding   │    │    RAG     │  │   Search    │
-        │   Agent   │   │   Agent    │    │   Agent    │  │   Agent     │
-        └─────┬─────┘   └─────┬──────┘    └─────┬──────┘  └──────┬──────┘
-              │               │                 │                │
-              │               │                 │         ┌──────▼──────┐
-              │               │                 │         │ Tavily Tool │
-              │               │                 │         │   (search)  │
-              │               │                 │         └──────┬──────┘
-              │               │                 │                │ loops back
-              ▼               ▼                 ▼                ▼
-             END             END               END          Search Agent
-                                                              (summarizes results)
+                          ┌────────────────────┐
+    User message ───────► │  Orchestrator Node  │◄─────────────┐
+                          └──────────┬──────────┘               │
+                                     │ decides: answer, or       │ tool results
+                                     │ call one or more tools    │ appended to
+                                     ▼                           │ conversation
+                          ┌────────────────────┐                 │
+                          │     Tools Node      │─────────────────┘
+                          └──────────┬──────────┘
+                                     │
+        ┌───────────────┬───────────┼───────────────┬───────────────┐
+        ▼               ▼           ▼                ▼               ▼
+  ┌───────────┐  ┌─────────────┐ ┌──────────────────┐ ┌────────────────────┐ ┌─────────────┐
+  │ web_search│  │  read_url   │ │search_my_documents│ │list_my_documents   │ │ write_code  │
+  │ (Tavily)  │  │(Tavily      │ │      (RAG)        │ │      (RAG)         │ │(deepseek-r1)│
+  │           │  │ Extract)    │ │                    │ │                    │ │             │
+  └───────────┘  └─────────────┘ └──────────────────┘ └────────────────────┘ └─────────────┘
+
+   Bounded by a per-turn tool-call budget (MAX_TOOL_CALLS_PER_TURN) — the loop above
+   terminates with a plain-prose answer once the budget is spent or the model stops
+   requesting tools.
 ```
 
 ### System Overview
@@ -169,23 +159,22 @@ The sidebar's search modal filters conversations already loaded in client state 
 ┌───────────────────────┐   SSE (text/event-stream)   ┌───────────────────────────┐
 │    Frontend (React)    │◄────────────────────────────►│  Backend (Node/Express)   │
 │  • Chat UI              │                              │  • authRoutes             │
-│  • File upload          │                              │  • chatsRoutes            │
+│  • Library (docs)       │                              │  • chatsRoutes            │
 │  • Chat history filter  │                              │  • MessageRoutes          │
 └───────────┬─────────────┘                              │  • documentRoutes         │
             │                                             │  • userRoutes             │
             ▼                                             └────────────┬──────────────┘
-   ┌────────────────┐                                                  │
-   │   Passport.js   │                                                 ▼
-   │ (Google/GitHub) │                                      ┌───────────────────────┐
-   └────────┬─────────┘                                     │    LangGraph Graph     │
-            ▼                                                │  Router → General /    │
-   ┌─────────────────────┐                                   │  Coding / Search / RAG │
-   │ Session + JWT auth   │                                  └────────────┬────────────┘
-   └─────────────────────┘                                                │
-                                                                ┌──────────▼───────────┐
-                                                                │  Qdrant Vector Store  │
-                                                                │  (Gemini embeddings)  │
-                                                                └───────────────────────┘
+   ┌────────────────────┐                                              │
+   │ OTP (email) or       │                                            ▼
+   │ Passport (OAuth)     │                                 ┌───────────────────────┐
+   └────────┬─────────────┘                                 │   LangGraph Graph      │
+            ▼                                                │  Orchestrator ⇄ Tools  │
+   ┌─────────────────────────┐                                └───────────┬────────────┘
+   │ Access token (JWT) +     │                                            │
+   │ rotating refresh token   │                                 ┌──────────▼───────────┐
+   │ (Mongo) · rate limits &  │                                 │  Qdrant Vector Store  │
+   │ OTP state (Redis)        │                                 │  (Gemini embeddings)  │
+   └─────────────────────────┘                                 └───────────────────────┘
 ```
 
 ---
@@ -196,12 +185,14 @@ The sidebar's search modal filters conversations already loaded in client state 
 |---|---|
 | **Frontend** | React 19 + Vite · Redux Toolkit · Tailwind CSS 4 · `react-markdown` (+ `remark-gfm`, `rehype-katex`) · `react-syntax-highlighter` · `@microsoft/fetch-event-source` |
 | **Backend** | Node.js · Express 5 · `dotenv` · `express-session` · `passport` · `cors` · `multer` |
-| **Database** | MongoDB + Mongoose (users, chats, messages, document metadata) |
+| **Database** | MongoDB + Mongoose (users, chats, messages, document metadata, refresh tokens, OTP requests) + GridFS (original uploaded file bytes, for Library preview) |
 | **Vector Store** | Qdrant, with an in-memory fallback for local development |
-| **LLM Providers** | Groq (Llama 3.1 / 3.3) · OpenRouter (DeepSeek R1 / DeepSeek Chat) · Google Gemini (embeddings) |
-| **Orchestration** | LangGraph (`@langchain/langgraph`) |
-| **Search Tool** | Tavily |
-| **Authentication** | Email/password (JWT) · Google OAuth 2.0 · GitHub OAuth 2.0 (`passport-google-oauth20`, `passport-github2`) |
+| **Cache / Rate Limiting** | Upstash Redis — OTP request rate limiting and refresh-token reuse detection |
+| **LLM Providers** | OpenRouter (DeepSeek Chat / DeepSeek R1) · Google Gemini (embeddings) |
+| **Orchestration** | LangGraph (`@langchain/langgraph`), single tool-calling orchestrator agent |
+| **Tools** | Tavily (web search + page extraction) |
+| **Authentication** | Passwordless — email OTP (`nodemailer` over Gmail SMTP) or Google/GitHub OAuth 2.0 (`passport-google-oauth20`, `passport-github2`) — backed by short-lived JWT access tokens and rotating, revocable refresh tokens |
+| **Testing** | Node's built-in test runner (`node:test`) + `supertest` for integration tests against the real Express app |
 | **Deployment** | Render (backend) · Vercel (frontend) |
 | **Package Manager** | npm — `.npmrc` sets `legacy-peer-deps=true` |
 
@@ -240,7 +231,7 @@ cp .env.example .env
 The frontend reads its backend URL from Vite's environment variables, e.g. in `Frontend/.env`:
 
 ```env
-VITE_BACKEND_URL=http://localhost:5000
+VITE_API_URL=http://localhost:5000
 ```
 
 ### Running Locally
@@ -255,7 +246,7 @@ cd Frontend
 npm run dev     # Vite dev server, defaults to http://localhost:5173
 ```
 
-Open **http://localhost:5173** to reach the login page. After signing in (email/password or OAuth), you'll land in the chat workspace.
+Open **http://localhost:5173** to reach the login page. After signing in (email OTP or OAuth), you'll land in the chat workspace.
 
 ---
 
@@ -276,7 +267,7 @@ Render picks up `.npmrc` automatically, so LangChain peer-dependency install iss
 ### Frontend — Vercel
 
 1. Import the repository into Vercel and set **Root Directory** to `Frontend`.
-2. Add the environment variable `VITE_BACKEND_URL`, pointing to your deployed backend (e.g. `https://cortex-backend.onrender.com`).
+2. Add the environment variable `VITE_API_URL`, pointing to your deployed backend (e.g. `https://cortex-backend.onrender.com`).
 3. Deploy. For explicit client-side routing rewrites with React Router, add a `vercel.json`:
 
 ```json
@@ -295,21 +286,26 @@ Render picks up `.npmrc` automatically, so LangChain peer-dependency install iss
 Cortex/
 ├─ Backend/
 │  ├─ Agents/
-│  │  ├─ graph.js              # LangGraph entry point — wires all agent nodes together
-│  │  ├─ modelConfig.js        # Per-agent LLM provider/model configuration
+│  │  ├─ graph.js              # LangGraph entry point — wires the orchestrator/tools loop
+│  │  ├─ modelConfig.js        # Per-role LLM model configuration (all via OpenRouter)
+│  │  ├─ guardrails.js         # Per-turn tool-call budget, tool allowlist resolution
+│  │  ├─ internalTag.js        # Tags internal LLM calls (title gen) so they're not streamed
 │  │  ├─ State.js              # Shared LangGraph state definition
 │  │  ├─ Nodes/
-│  │  │  ├─ routerNode.js
-│  │  │  ├─ generalNode.js
-│  │  │  ├─ codingNode.js
-│  │  │  ├─ searchNode.js
-│  │  │  └─ ragNode.js
-│  │  └─ Prompts/               # System prompts per agent
+│  │  │  ├─ agentNode.js       # Orchestrator: decides to answer or call tools
+│  │  │  ├─ toolsNode.js       # Executes requested tool calls
+│  │  │  └─ greetingNode.js    # Small/cheap model for chat-title generation
+│  │  ├─ Prompts/
+│  │  │  ├─ OrchestratorAgent.js
+│  │  │  └─ CodingAgent.js
+│  │  └─ Tools/
+│  │     └─ index.js           # web_search, read_url, search_my_documents,
+│  │                            # list_my_documents, write_code
 │  ├─ Controllers/
-│  │  ├─ authControllers.js
+│  │  ├─ authControllers.js    # OTP request/verify, OAuth callbacks, refresh, logout
 │  │  ├─ chatControllers.js
 │  │  ├─ documentControllers.js
-│  │  ├─ MessageControllers.js  # includes the SSE streaming handler
+│  │  ├─ MessageControllers.js  # SSE streaming handler; always saves a real reply on failure
 │  │  └─ userControllers.js
 │  ├─ Routers/
 │  │  ├─ authRoutes.js
@@ -319,41 +315,63 @@ Cortex/
 │  │  └─ userRoutes.js
 │  ├─ Services/
 │  │  ├─ authServices.js
+│  │  ├─ tokenService.js       # Access/refresh token issuance and rotation
+│  │  ├─ otpService.js         # OTP generation, hashing, verification
+│  │  ├─ emailService.js       # OTP delivery over SMTP
 │  │  ├─ documentService.js     # PDF/TXT text extraction
+│  │  ├─ fileStorageService.js  # GridFS read/write for original file bytes (Library preview)
 │  │  └─ qdrantService.js       # Vector store read/write, with in-memory fallback
 │  ├─ Config/
-│  │  └─ Passport.js            # Google & GitHub OAuth strategies
+│  │  ├─ Passport.js            # Google & GitHub OAuth strategies
+│  │  └─ redis.js               # Upstash Redis client (rate limiting, refresh reuse)
 │  ├─ Model/
 │  │  ├─ UserModel.js
 │  │  ├─ ChatModel.js
 │  │  ├─ MessageModel.js
-│  │  └─ DocumentModel.js
+│  │  ├─ DocumentModel.js
+│  │  ├─ OtpRequestModel.js
+│  │  └─ RefreshTokenModel.js
 │  ├─ middleware/
-│  │  └─ authmiddleware.js      # Bearer-token auth guard for API routes
+│  │  ├─ authmiddleware.js      # Bearer-token auth guard for API routes
+│  │  ├─ fileTypeGuard.js       # Byte-sniffed upload type verification (not trust-the-extension)
+│  │  ├─ otpRateLimit.js
+│  │  ├─ sanitize.js            # Strips Mongo operator/prototype-pollution keys from input
+│  │  └─ validate.js            # Zod-schema request validation
+│  ├─ Validation/
+│  │  └─ schemas.js
+│  ├─ utils/
+│  │  └─ apiError.js            # Consistent { error: { code, message } } response shape
+│  ├─ tests/                    # node:test + supertest, run with `npm test`
+│  ├─ app.js                    # Express app assembly (separated from server.js for testability)
 │  ├─ server.js
 │  └─ .npmrc                    # legacy-peer-deps=true
 └─ Frontend/
    ├─ src/
    │  ├─ Components/
-   │  │  ├─ ChatInput.jsx       # Message input, file upload, PDF preview trigger
+   │  │  ├─ ChatInput.jsx       # Message input, PDF/TXT upload
    │  │  ├─ ChatArea.jsx
    │  │  ├─ MessageBubble.jsx
    │  │  ├─ CodeBlock.jsx       # Syntax-highlighted code rendering
    │  │  ├─ SearchModal.jsx     # Client-side chat history filter
-   │  │  └─ Sidebar.jsx
+   │  │  ├─ Sidebar.jsx
+   │  │  ├─ ErrorBoundary.jsx   # Top-level render-error boundary
+   │  │  └─ SystemScreen.jsx    # Shared shell for error/404 pages
    │  ├─ Layout/
    │  │  ├─ DashboardLayout.jsx
    │  │  └─ ProtectedRoute.jsx
    │  ├─ Pages/
    │  │  ├─ ChatPage.jsx
-   │  │  ├─ LoginPage.jsx
-   │  │  ├─ SignupPage.jsx
+   │  │  ├─ LoginPage.jsx       # OTP + OAuth, no password field
+   │  │  ├─ LibraryPage.jsx     # Uploaded-document hub: search, preview, download
    │  │  ├─ ProfilePage.jsx
    │  │  ├─ SettingsPage.jsx
    │  │  ├─ OAuthCallback.jsx
    │  │  └─ NotFoundPage.jsx
    │  ├─ Context/
    │  │  └─ AuthContext.jsx
+   │  ├─ api/
+   │  │  └─ client.js           # Axios instance; attaches bearer token, handles refresh
+   │  ├─ utils/
    │  ├─ App.jsx
    │  └─ main.jsx
    ├─ public/
@@ -369,42 +387,58 @@ Cortex/
 
 ### Server & Routing
 
-- `server.js` boots Express, configures CORS, sessions (for the OAuth handshake), and Passport.
+- `server.js` boots the app built in `app.js` (kept separate so tests can build a real Express app without opening a real port); `app.js` configures CORS, sessions (for the OAuth handshake only), and Passport.
 - All API endpoints live under `/api/` — `/api/auth`, `/api/chats`, `/api/messages`, `/api/documents`, `/api/users`.
 - Routes are intentionally thin; business logic lives in `Controllers/`.
 
 ### Authentication
 
-Cortex uses two distinct mechanisms for two distinct purposes:
+Cortex is fully passwordless — there is no password field anywhere in the product. Two independent sign-in paths converge on the same token issuance:
 
-- **Session-based** (via `express-session` + Passport) — used *only* during the Google/GitHub OAuth handshake.
-- **JWT Bearer tokens** — used to authenticate subsequent API requests. `authmiddleware.js` reads the `Authorization: Bearer <token>` header and verifies it via `authServices.js`.
+- **Email OTP** — a 6-digit code, rate-limited per address and per IP (Redis-backed), expiring after a short window. Verifying a valid code creates the account if one doesn't already exist, so sign-up and sign-in are the same flow.
+- **OAuth (Google/GitHub)** — via Passport. The Express session (`express-session`) is used *only* for the duration of the OAuth handshake itself, never for ongoing API auth.
 
-> **Note:** the JWT signing secret (`JWT_SECRET_KEY`) and the Express session secret (`JWT_SECRET`) are two distinct environment variables — don't conflate them when configuring your `.env`.
+Once signed in, every API request is authenticated the same way regardless of how the user logged in:
+
+- A short-lived **JWT access token**, sent as `Authorization: Bearer <token>` and verified by `authmiddleware.js`. Access tokens are not revocable by design — that's what makes them short-lived.
+- A long-lived, **rotating refresh token**, tracked in Mongo (`RefreshTokenModel.js`) so it *can* be revoked, with reuse detection to catch a stolen token being replayed after its holder already rotated it.
+
+> **Note:** the session secret (`SESSION_SECRET`) and the JWT signing secret (`JWT_ACCESS_SECRET`) are two distinct, required environment variables covering two different mechanisms — a leak of one must not compromise the other.
 
 ### Document Processing & RAG Pipeline
 
 | Step | Detail |
 |---|---|
-| 1. Upload | `multer` stores the file in memory (10 MB limit, PDF/TXT only) |
+| 1. Upload | `multer` stores the file in memory (10 MB limit, PDF/TXT only, verified by content — not by trusting the extension or declared MIME type) |
 | 2. Extraction | `documentService.js` extracts raw text via `pdf-parse` for PDFs, or reads plain text directly |
 | 3. Chunking | `RecursiveCharacterTextSplitter` — 1000-character chunks, 150-character overlap |
 | 4. Embedding | Google Generative AI embeddings (`gemini-embedding-001`) |
-| 5. Storage | `qdrantService.js` writes chunks to Qdrant with metadata (`ownerId`, `documentId`, `filename`, `chunkIndex`). Falls back to an in-memory keyword-overlap store if Qdrant or the embeddings key isn't configured |
-| 6. Retrieval | `ragNode.js` reformulates the user's question into a sharper search query (using their recent upload list as context), retrieves the top matches scoped to their `ownerId`, and generates a grounded answer with inline source citations |
+| 5. Storage | `qdrantService.js` writes chunks to Qdrant with metadata (`ownerId`, `documentId`, `filename`, `chunkIndex`); `fileStorageService.js` separately stores the original bytes in GridFS so the file can be re-previewed later, not just searched. Falls back to an in-memory keyword-overlap store if Qdrant or the embeddings key isn't configured |
+| 6. Retrieval | The `search_my_documents` tool reformulates the user's question into a sharper search query (using their recent upload list as context), retrieves the top matches scoped to their `ownerId`, and the orchestrator generates a grounded answer with inline source citations |
 
-### Multi-Agent Orchestration (LangGraph)
+### Agent Orchestration (LangGraph)
 
-- **Router agent** (`routerNode.js`) — classifies intent into `general`, `coding`, `search`, or `rag` using Zod-validated structured output; fenced code blocks skip classification and go straight to the coding agent.
-- **General agent** — open-ended conversation.
-- **Coding agent** — code generation, debugging, and refactoring.
-- **Search agent** — calls the Tavily tool for live web results, then loops back to summarize them.
-- **RAG agent** — retrieves and answers from the user's uploaded documents.
+A single orchestrator agent (`agentNode.js`) holds the conversation and decides each turn whether to answer directly or call one or more tools (`toolsNode.js`), looping until it has enough to answer or hits the per-turn tool-call budget (`guardrails.js`, `MAX_TOOL_CALLS_PER_TURN`, default 5):
+
+- **`web_search`** — live web results via Tavily.
+- **`read_url`** — fetches and extracts a specific page's content via Tavily Extract rather than a raw server-side `fetch()`, which would otherwise let a model-chosen URL reach internal/metadata addresses (SSRF).
+- **`search_my_documents`** / **`list_my_documents`** — the RAG surface over the user's own uploads.
+- **`write_code`** — hands code generation, debugging, and refactoring to a dedicated model (`deepseek-r1`) rather than the general conversational one.
+
+A separate, cheap model (`greetingNode.js`) generates the chat title from the first message — tagged internally so it never appears in the streamed response.
+
+If generation fails partway — a provider outage, an exhausted API quota — the partial output that *did* stream is preserved and a real, saved AI reply still lands in the conversation (with a specific message when the cause is an out-of-credits LLM provider), rather than leaving a question permanently unanswered.
 
 ### Vector Store (Qdrant)
 
 - `qdrantService.js` handles indexing, similarity search, and deletion, scoped per user via metadata filters.
 - Falls back transparently to an in-memory store when Qdrant isn't reachable or configured, so the RAG pipeline remains fully functional in local development without extra setup.
+
+### Testing
+
+- `Backend/tests/` — unit and integration tests using Node's built-in `node:test` runner and `supertest` against the real Express app (with only Mongo, the LLM graph, and Qdrant stubbed).
+- Covers hardening rules (injection/traversal/type-spoofing rejection, cross-user access isolation), the OTP auth flow, and generation-failure handling (partial-output preservation, always saving a real reply, reporting the right chat on failure).
+- Run with `npm test` from `Backend/`.
 
 ---
 
@@ -414,26 +448,29 @@ Cortex uses two distinct mechanisms for two distinct purposes:
 
 | Component | Purpose |
 |---|---|
-| `ChatInput.jsx` | Message input and file upload; uploaded files render as chips with a click-to-preview PDF modal |
+| `ChatInput.jsx` | Message input and PDF/TXT upload for RAG questions |
 | `ChatArea.jsx` / `MessageBubble.jsx` / `CodeBlock.jsx` | Conversation rendering, including markdown, LaTeX, and syntax-highlighted code |
-| `Sidebar.jsx` | Navigation and entry point to `SearchModal` |
+| `Sidebar.jsx` | Navigation — new chat, search, Home, Library, chat list, settings/profile |
 | `SearchModal.jsx` | Filters chats already loaded in client state — a UI convenience, not a backend search query |
+| `LibraryPage.jsx` | Every uploaded document in one place — search, click-to-preview (renders the actual PDF/text content, not just a filename), download, delete |
+| `ErrorBoundary.jsx` / `SystemScreen.jsx` | Top-level render-error boundary and the shared full-bleed shell it and the 404 page use |
 | `DashboardLayout.jsx` | Authenticated app shell |
 
 ### File Upload & Preview
 
-- Accepts `application/pdf` and `text/plain`, up to 10 MB.
+- Accepts `application/pdf` and `text/plain`, up to 10 MB, verified server-side by content rather than trusted from the extension.
 - Files are sent as `multipart/form-data` to `POST /api/documents/upload`.
-- Returned metadata is stored in client state and rendered as an interactive chip; PDFs preview via `URL.createObjectURL` in an `<iframe>`.
+- The original file is stored in GridFS (`fileStorageService.js`) so `GET /api/documents/:id/content` can serve it back later — Library's preview modal fetches it as an authenticated blob (not a bare URL, which would need the access token embedded in it) and renders a PDF inline, shows text directly, or offers a download.
 
 ### Streaming
 
 - `POST /api/messages` streams the model's response back over `text/event-stream`, consumed on the client with `@microsoft/fetch-event-source`.
 - An `AbortController` cancels the stream when a conversation ends or the component unmounts.
+- A failure mid-stream reloads the chat's real saved history rather than showing a client-side approximation that can drift from what's actually persisted — the message you sent doesn't just disappear because generation failed.
 
 ### Styling
 
-- Dark-themed UI built with Tailwind CSS, using the Inter font.
+- Dark theme (`zinc-950`/`zinc-900` surfaces, a single blue accent) built with Tailwind CSS 4, defined as design tokens in `index.css` and reused consistently across auth, chat, Library, and the system pages.
 - Custom favicon and page title.
 
 ---
@@ -443,27 +480,35 @@ Cortex uses two distinct mechanisms for two distinct purposes:
 | Variable | Required | Description |
 |---|:---:|---|
 | `PORT` | No *(defaults to `5000`)* | Backend listening port |
-| `FRONTEND_URL` | Yes | Used for CORS and OAuth redirect fallback |
+| `FRONTEND_URL` | Yes | Used for CORS and the OAuth redirect target |
 | `MONGO_URI` | Yes | MongoDB connection string |
-| `JWT_SECRET` | Yes | Express session secret (used during the OAuth handshake) |
-| `JWT_SECRET_KEY` | Yes | Secret used to sign/verify API JWTs |
+| `SESSION_SECRET` | Yes | Signs the Express session cookie — used only during the OAuth handshake |
+| `JWT_ACCESS_SECRET` | Yes | Signs/verifies API access tokens. Must differ from `SESSION_SECRET` |
+| `ACCESS_TOKEN_TTL` | No *(defaults to `15m`)* | Access token lifetime |
+| `REFRESH_TOKEN_TTL_DAYS` | No *(defaults to `7`)* | Refresh token lifetime, in days |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `MAIL_FROM` | Yes | Gmail SMTP credentials for OTP delivery — use a dedicated throwaway account and an App Password, not a personal Gmail password |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Yes | Upstash Redis — OTP rate limiting and refresh-token reuse tracking |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | For Google OAuth | Google OAuth app credentials |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | For GitHub OAuth | GitHub OAuth app credentials |
-| `GROQ_API_KEY` | Yes | Groq API key (router/general/RAG models) |
-| `OPENROUTER_API_KEY` | Yes | OpenRouter API key (coding/search models) |
+| `OPENROUTER_API_KEY` | Yes | OpenRouter API key — every agent model runs through this |
 | `GEMINI_API_KEY` / `GOOGLE_API_KEY` | Yes | Google Generative AI key, used for embeddings |
-| `TAVILY_API_KEY` | Yes | Tavily API key for the search agent |
+| `TAVILY_API_KEY` | Yes | Tavily API key — powers `web_search` and `read_url` |
+| `ORCHESTRATOR_MODEL` / `GREETING_MODEL` / `GENERAL_MODEL` / `RAG_MODEL` / `CODING_MODEL` / `SEARCH_MODEL` | No | Per-role model overrides — see `.env.example` for current defaults |
+| `MAX_TOOL_CALLS_PER_TURN` | No *(defaults to `5`)* | Ceiling on tool calls the orchestrator can make in one turn |
 | `QDRANT_URL` | No | Qdrant instance URL — omit to use the in-memory fallback |
 | `QDRANT_API_KEY` | No | Qdrant API key, if your instance requires one |
 | `QDRANT_COLLECTION` | No *(defaults to `cortex_documents`)* | Qdrant collection name |
-| `VITE_BACKEND_URL` *(Frontend)* | Yes | Base URL the frontend uses to call the backend API |
+| `EMBEDDING_MODEL` | No *(defaults to `gemini-embedding-001`)* | Determines vector size — the Qdrant collection must be created with a matching dimension |
+| `VITE_API_URL` *(Frontend)* | Yes | Base URL the frontend uses to call the backend API. **Must be this exact name** — the code reads `import.meta.env.VITE_API_URL`. |
+
+See `Backend/.env.example` for the authoritative, up-to-date list with inline setup notes.
 
 ---
 
 ## Known Limitations / Roadmap
 
-- [ ] No automated test suite is currently committed to the repository.
-- [ ] Authentication mixes session-based and JWT-based flows for different purposes (see [Authentication](#authentication)) — worth consolidating as the project matures.
+- [ ] Code-writing is generate-only — the `write_code` tool has no execution sandbox (a disposable-container approach doesn't fit this project's current deployment target).
+- [ ] Chat history search filters chats already loaded on the client rather than querying the backend.
 - [ ] Expand deployment documentation with monitoring/observability guidance.
 
 ---

@@ -1,26 +1,22 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-// This gives us the exact same dark theme used by VS Code!
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 const CodeBlock = ({ language, value }) => {
   const [isCopied, setIsCopied] = useState(false);
 
-  // HOW IT WORKS: navigator.clipboard is a built-in browser API that lets us write to the user's clipboard!
   const handleCopy = () => {
     navigator.clipboard.writeText(value);
     setIsCopied(true);
 
-    // Switch the text back to "Copy Code" after 2 seconds
     setTimeout(() => {
       setIsCopied(false);
     }, 2000);
   };
 
   return (
-    <div className="relative my-4 rounded-xl overflow-hidden bg-[#1e1e1e] border border-gray-700 shadow-xl">
-      {/* The Top Header Bar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-800 text-xs text-gray-400 font-mono border-b border-gray-700">
+    <div className="relative my-4 rounded-xl overflow-hidden bg-zinc-950 border border-white/10 shadow-xl">
+      <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 text-xs text-secondary-text font-mono border-b border-white/10">
         <span>{language || "text"}</span>
 
         <button
@@ -67,7 +63,6 @@ const CodeBlock = ({ language, value }) => {
         </button>
       </div>
 
-      {/* The Code Engine Window */}
       <div className="text-sm overflow-x-auto no-scrollbar">
         <SyntaxHighlighter
           language={language}

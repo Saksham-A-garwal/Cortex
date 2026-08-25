@@ -1,10 +1,15 @@
 const express = require("express");
 const multer = require("multer");
 const { isAuthenticated } = require("../middleware/authmiddleware");
+const { validate } = require("../middleware/validate");
+const { idParamSchema } = require("../Validation/schemas");
+const { fileTypeGuard } = require("../middleware/fileTypeGuard");
+const { sendError } = require("../utils/apiError");
 const {
   handleUploadDocument,
   handleGetDocuments,
   handleDeleteDocument,
+  handleGetDocumentContent,
 } = require("../Controllers/documentControllers");
 
 const router = express.Router();
@@ -14,21 +19,29 @@ const upload = multer({
   fileFilter: (req, file, callback) => {
     const allowedTypes = ["application/pdf", "text/plain"];
     if (allowedTypes.includes(file.mimetype)) return callback(null, true);
-    return callback(new Error("Only PDF and TXT files are supported."));
+    const error = new Error("Only PDF and TXT files are supported.");
+    error.isFileFilterRejection = true;
+    return callback(error);
   },
 });
 
 router.use(isAuthenticated);
 router.get("/", handleGetDocuments);
-router.post("/upload", upload.single("file"), handleUploadDocument);
-router.delete("/:id", handleDeleteDocument);
+router.post("/upload", upload.single("file"), fileTypeGuard, handleUploadDocument);
+router.get("/:id/content", validate({ params: idParamSchema }), handleGetDocumentContent);
+router.delete("/:id", validate({ params: idParamSchema }), handleDeleteDocument);
 
 router.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {
-    return res.status(400).json({ msg: "Document upload failed: file must be 10 MB or smaller." });
+    if (error.code === "LIMIT_FILE_SIZE") {
+      return sendError(res, 400, "FILE_TOO_LARGE", "Document upload failed: file must be 10 MB or smaller.");
+    }
+    return sendError(res, 400, "UPLOAD_FAILED", "Document upload failed.");
   }
-  if (error) return res.status(400).json({ msg: error.message || "Document upload failed." });
-  return next();
+  if (error?.isFileFilterRejection) {
+    return sendError(res, 400, "UNSUPPORTED_FILE_TYPE", error.message);
+  }
+  return next(error);
 });
 
 module.exports = router;

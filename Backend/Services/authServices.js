@@ -8,12 +8,12 @@ const setUser = (user) => {
       fullname: user.fullname,
       role : user.role
     },
-    process.env.JWT_SECRET_KEY,
+    process.env.JWT_ACCESS_SECRET,
   );
 };
 
 const VerifyUser = (token) => {
-  return jwt.verify(token, process.env.JWT_SECRET_KEY);
+  return jwt.verify(token, process.env.JWT_ACCESS_SECRET);
 };
 
 module.exports = { setUser, VerifyUser };

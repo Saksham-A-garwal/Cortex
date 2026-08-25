@@ -1,31 +1,33 @@
-import React from "react";
 import { Link } from "react-router-dom";
+import SystemScreen from "../Components/SystemScreen";
 
 const NotFoundPage = () => {
   return (
-    // We use a dark background and center everything on the screen
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-900 text-white">
-      <h1 className="text-9xl font-extrabold text-gray-700 tracking-widest">
-        404
-      </h1>
-
-      {/* Absolute positioning trick to put text perfectly over the giant 404 */}
-      <div className="bg-blue-600 px-2 text-sm rounded rotate-12 absolute">
-        Page Not Found
+    <SystemScreen>
+      <div className="relative mb-2">
+        <h1 className="text-8xl md:text-9xl font-extrabold text-zinc-800 tracking-widest select-none">
+          404
+        </h1>
+        <span className="absolute top-2 left-1/2 -translate-x-1/2 bg-accent text-white text-xs font-medium px-2 py-1 rounded rotate-6 whitespace-nowrap">
+          Signal unavailable
+        </span>
       </div>
 
-      <p className="mt-8 text-gray-400 mb-6 text-center max-w-md">
-        Oops! The page you are looking for doesn't exist, has been removed, or
-        is temporarily unavailable.
+      <h2 className="text-2xl font-bold mt-6 mb-2">Page not found</h2>
+      <p className="text-secondary-text mb-8 max-w-sm">
+        The page you're looking for doesn't exist, has been moved, or was never here.
       </p>
 
-      <Link
-        to="/"
-        className="px-6 py-3 bg-white text-gray-900 font-semibold rounded-lg hover:bg-gray-200 transition-colors"
-      >
-        Return to Workspace
-      </Link>
-    </div>
+      <div className="flex flex-col items-center gap-4">
+        <Link
+          to="/"
+          className="px-6 py-3 bg-accent hover:opacity-90 transition-opacity text-white font-semibold rounded-lg"
+        >
+          Back to Dashboard
+        </Link>
+        <span className="text-sm text-secondary-text/70 cursor-default">Contact Support</span>
+      </div>
+    </SystemScreen>
   );
 };
 
