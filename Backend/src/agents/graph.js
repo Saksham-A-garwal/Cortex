@@ -3,13 +3,6 @@ const { StateGraph, START, END } = require("@langchain/langgraph");
 const { StateAnnotation } = require("./state");
 const { agentNode } = require("./nodes/agentNode");
 const { toolsNode } = require("./nodes/toolsNode");
-const { isGreeting, greetingNode } = require("./nodes/greetingNode");
-
-const routeFromEntry = (state) => {
-  const latest = state.messages.at(-1);
-  const content = typeof latest?.content === "string" ? latest.content : "";
-  return isGreeting(content) ? "greeting" : "agent";
-};
 
 const shouldContinueToTools = (state) => {
   const lastMessage = state.messages.at(-1);
@@ -19,16 +12,10 @@ const shouldContinueToTools = (state) => {
 
 const createCortexAgentApp = () => {
   const workflow = new StateGraph(StateAnnotation)
-    .addNode("greeting", greetingNode)
     .addNode("agent", agentNode)
     .addNode("tools", toolsNode)
 
-    .addConditionalEdges(START, routeFromEntry, {
-      greeting: "greeting",
-      agent: "agent",
-    })
-
-    .addEdge("greeting", END)
+    .addEdge(START, "agent")
     .addConditionalEdges("agent", shouldContinueToTools, {
       tools: "tools",
       [END]: END,
@@ -47,6 +34,5 @@ const getCortexAgentApp = () => {
 module.exports = {
   getCortexAgentApp,
   createCortexAgentApp,
-  routeFromEntry,
   shouldContinueToTools,
 };

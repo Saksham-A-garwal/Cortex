@@ -4,9 +4,9 @@ const { TavilySearch, TavilyExtract } = require("@langchain/tavily");
 const { HumanMessage, SystemMessage } = require("@langchain/core/messages");
 const { MultiServerMCPClient } = require("@langchain/mcp-adapters");
 
-const Document = require("../../models/DocumentModel");
-const { retrieveRelevantDocuments } = require("../../services/qdrantService");
-const { getUserMcpServers } = require("../../services/connectorService");
+const Document = require("../../modules/document/document.model");
+const { retrieveRelevantDocuments } = require("../../modules/document/qdrant.service");
+const { getUserMcpServers } = require("../../modules/connectors/connector.service");
 const { getAgentModel } = require("../modelConfig");
 const { INTERNAL_LLM_TAG } = require("../internalTag");
 const { codingPrompt } = require("../prompts/codingAgent");

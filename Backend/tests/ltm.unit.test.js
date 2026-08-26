@@ -51,7 +51,7 @@ const loadLtmService = ({
   ltmEnabled = true,
   userId = "u1",
 }) => {
-  delete require.cache[resolve("src/services/ltmService.js")];
+  delete require.cache[resolve("src/modules/memory/ltm.service.js")];
 
   const chatModel = new SimpleFakeModel();
   const messageModel = new SimpleFakeModel();
@@ -59,15 +59,15 @@ const loadLtmService = ({
   const userModel = new SimpleFakeModel();
   userModel.rows.push({ _id: userId, ltmEnabled });
 
-  stubModule("src/models/ChatModel.js", chatModel);
-  stubModule("src/models/MessageModel.js", messageModel);
-  stubModule("src/models/UserMemoryState.js", stateModel);
-  stubModule("src/models/UserModel.js", userModel);
+  stubModule("src/modules/chat/chat.model.js", chatModel);
+  stubModule("src/modules/message/message.model.js", messageModel);
+  stubModule("src/modules/memory/userMemoryState.model.js", stateModel);
+  stubModule("src/modules/user/user.model.js", userModel);
   stubModule("src/agents/modelConfig.js", { getAgentModel: () => ({ invoke }) });
 
   const upsertCalls = [];
   const deleteCalls = [];
-  stubModule("src/services/memoryQdrantService.js", {
+  stubModule("src/modules/memory/memoryQdrant.service.js", {
     embed: async () => [1, 0, 0],
     upsertFact: async (userId, fact) => {
       upsertCalls.push({ userId, fact });
@@ -81,7 +81,7 @@ const loadLtmService = ({
     ...qdrantOverrides,
   });
 
-  const ltmService = require(resolve("src/services/ltmService.js"));
+  const ltmService = require(resolve("src/modules/memory/ltm.service.js"));
   return { ltmService, chatModel, messageModel, stateModel, userModel, upsertCalls, deleteCalls };
 };
 

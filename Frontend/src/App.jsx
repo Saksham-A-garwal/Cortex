@@ -1,14 +1,14 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-import LoginPage from "./pages/LoginPage";
-import ChatPage from "./pages/ChatPage";
-import SettingsPage from "./pages/SettingsPage";
-import LibraryPage from "./pages/LibraryPage";
-import DashboardLayout from "./layout/DashboardLayout";
-import NotFoundPage from "./pages/NotFoundPage";
-import ProtectedRoute from "./layout/ProtectedRoute";
-import OAuthCallback from "./pages/OAuthCallback";
-import ErrorBoundary from "./components/ErrorBoundary";
+import LoginPage from "./modules/auth/login.page";
+import ChatPage from "./modules/chat/chat.page";
+import SettingsPage from "./modules/settings/settings.page";
+import LibraryPage from "./modules/library/library.page";
+import DashboardLayout from "./shell/dashboardLayout";
+import NotFoundPage from "./system/notFound.page";
+import ProtectedRoute from "./modules/auth/protectedRoute";
+import OAuthCallback from "./modules/auth/oauthCallback.page";
+import ErrorBoundary from "./system/errorBoundary";
 
 const App = () => {
   return (

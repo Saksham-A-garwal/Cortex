@@ -2,8 +2,8 @@
 require("dotenv").config();
 
 const mongoose = require("mongoose");
-const DocumentModel = require("../src/models/DocumentModel");
-const { indexDocument, deleteDocumentVectors } = require("../src/services/qdrantService");
+const DocumentModel = require("../src/modules/document/document.model");
+const { indexDocument, deleteDocumentVectors } = require("../src/modules/document/qdrant.service");
 const { getCortexAgentApp } = require("../src/agents/graph");
 const { stripToolCallMarkup } = require("../src/agents/nodes/agentNode");
 const { INTERNAL_LLM_TAG } = require("../src/agents/internalTag");

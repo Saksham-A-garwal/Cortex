@@ -16,10 +16,10 @@ const stubModule = (relative, exports) => {
 };
 
 const loadMemoryService = ({ invoke }) => {
-  delete require.cache[resolve("src/services/memoryService.js")];
+  delete require.cache[resolve("src/modules/message/stm.service.js")];
 
   const chatUpdates = [];
-  stubModule("src/models/ChatModel.js", {
+  stubModule("src/modules/chat/chat.model.js", {
     findByIdAndUpdate: async (id, update) => {
       chatUpdates.push({ id, update });
       return null;
@@ -27,7 +27,7 @@ const loadMemoryService = ({ invoke }) => {
   });
   stubModule("src/agents/modelConfig.js", { getAgentModel: () => ({ invoke }) });
 
-  const memoryService = require(resolve("src/services/memoryService.js"));
+  const memoryService = require(resolve("src/modules/message/stm.service.js"));
   return { memoryService, chatUpdates };
 };
 

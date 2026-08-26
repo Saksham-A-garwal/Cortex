@@ -9,8 +9,7 @@ const {
   isOverToolBudget,
 } = require("../src/agents/guardrails");
 
-const { isGreeting } = require("../src/agents/nodes/greetingNode");
-const { routeFromEntry, shouldContinueToTools } = require("../src/agents/graph");
+const { shouldContinueToTools } = require("../src/agents/graph");
 
 test("FR-AGENT-05: a fresh turn is under budget", () => {
   assert.equal(isOverToolBudget(0), false);
@@ -46,27 +45,6 @@ test("FR-AGENT-05: filtering removes tools the session is not allowed", () => {
   assert.deepEqual(filtered.map((t) => t.name), ["web_search"]);
 });
 
-test("FR-AGENT-04: greetings and pleasantries short-circuit", () => {
-  for (const text of ["hi", "Hello!", "hey there", "thanks!", "good morning", "ok", "bye"]) {
-    assert.equal(isGreeting(text), true, `expected a greeting: ${text}`);
-  }
-});
-
-test("FR-AGENT-04: real questions do NOT short-circuit", () => {
-  for (const text of [
-    "what is the current node lts version?",
-    "summarise my uploaded pdf",
-    "write a function that reverses a string",
-    "hello, can you search the web for the latest react release notes and compare them",
-  ]) {
-    assert.equal(isGreeting(text), false, `should not be a greeting: ${text}`);
-  }
-});
-
-test("FR-AGENT-04: a fenced code block is never a greeting", () => {
-  assert.equal(isGreeting("hi ```js\nconst x=1\n```"), false);
-});
-
 test("FR-AGENT-03: the loop ends when the model stops requesting tools", () => {
   const state = { messages: [{ content: "done" }] };
   assert.notEqual(shouldContinueToTools(state), "tools");
@@ -75,9 +53,4 @@ test("FR-AGENT-03: the loop ends when the model stops requesting tools", () => {
 test("FR-AGENT-03: the loop continues while tool calls are pending", () => {
   const state = { messages: [{ content: "", tool_calls: [{ name: "web_search", id: "1" }] }] };
   assert.equal(shouldContinueToTools(state), "tools");
-});
-
-test("entry routing sends greetings to the cheap path and everything else to the agent", () => {
-  assert.equal(routeFromEntry({ messages: [{ content: "hi" }] }), "greeting");
-  assert.equal(routeFromEntry({ messages: [{ content: "search the web for node lts" }] }), "agent");
 });

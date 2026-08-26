@@ -5,17 +5,17 @@ const session = require("express-session");
 
 const cookieParser = require("cookie-parser");
 
-const passport = require("./config/passport");
-const { sanitizeRequest } = require("./middleware/sanitize");
-const { sendError, ApiError } = require("./utils/apiError");
+const passport = require("./modules/auth/passport");
+const { sanitizeRequest } = require("./shared/middleware/sanitize.middleware");
+const { sendError, ApiError } = require("./shared/utils/apiError");
 
-const authRoutes = require("./routes/authRoutes");
-const chatRoutes = require("./routes/chatsRoutes");
-const MessageRoutes = require("./routes/messageRoutes");
-const userRoutes = require("./routes/userRoutes");
-const documentRoutes = require("./routes/documentRoutes");
-const memoryRoutes = require("./routes/memoryRoutes");
-const connectorRoutes = require("./routes/connectorRoutes");
+const authRoutes = require("./modules/auth/auth.routes");
+const chatRoutes = require("./modules/chat/chat.routes");
+const MessageRoutes = require("./modules/message/message.routes");
+const userRoutes = require("./modules/user/user.routes");
+const documentRoutes = require("./modules/document/document.routes");
+const memoryRoutes = require("./modules/memory/memory.routes");
+const connectorRoutes = require("./modules/connectors/connector.routes");
 
 const buildAllowedOrigins = (frontendUrl = process.env.FRONTEND_URL) =>
   (frontendUrl || "http://localhost:5173")

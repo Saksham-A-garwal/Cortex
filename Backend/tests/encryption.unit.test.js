@@ -4,7 +4,7 @@ const crypto = require("crypto");
 
 process.env.ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || crypto.randomBytes(32).toString("base64");
 
-const { encrypt, decrypt } = require("../src/utils/encryption");
+const { encrypt, decrypt } = require("../src/modules/connectors/encryption.util");
 
 test("encrypt/decrypt round-trips a plaintext token exactly", () => {
   const plaintext = "ghp_someRealisticLookingGitHubToken1234567890";

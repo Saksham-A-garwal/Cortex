@@ -115,19 +115,19 @@ const buildTestApp = ({
     UserMemoryState: new FakeModel("UserMemoryState"),
   };
 
-  stubModule("src/models/ChatModel.js", models.Chat);
-  stubModule("src/models/MessageModel.js", models.Message);
-  stubModule("src/models/UserModel.js", models.User);
-  stubModule("src/models/DocumentModel.js", models.Document);
-  stubModule("src/models/UserMemoryState.js", models.UserMemoryState);
+  stubModule("src/modules/chat/chat.model.js", models.Chat);
+  stubModule("src/modules/message/message.model.js", models.Message);
+  stubModule("src/modules/user/user.model.js", models.User);
+  stubModule("src/modules/document/document.model.js", models.Document);
+  stubModule("src/modules/memory/userMemoryState.model.js", models.UserMemoryState);
 
-  stubModule("src/config/passport.js", {
+  stubModule("src/modules/auth/passport.js", {
     initialize: () => (_req, _res, next) => next(),
     session: () => (_req, _res, next) => next(),
     authenticate: () => (_req, _res, next) => next(),
   });
 
-  stubModule("src/middleware/authMiddleware.js", {
+  stubModule("src/shared/middleware/auth.middleware.js", {
     isAuthenticated: (req, res, next) => {
       if (!authenticatedUser) {
         return res.status(401).json({ error: { code: "UNAUTHENTICATED", message: "No token." } });
@@ -142,16 +142,16 @@ const buildTestApp = ({
     getCortexAgentApp: () => cortexAgentApp,
   });
   stubModule("src/agents/modelConfig.js", { getAgentModel: () => ({ invoke: async () => ({ content: "Title" }) }) });
-  stubModule("src/services/qdrantService.js", {
+  stubModule("src/modules/document/qdrant.service.js", {
     indexDocument: async () => 3,
     deleteDocumentVectors: async () => {},
   });
-  stubModule("src/services/fileStorageService.js", {
+  stubModule("src/modules/document/fileStorage.service.js", {
     storeFile: async () => "fake-storage-id",
     streamFileTo: async () => {},
     deleteFile: async () => {},
   });
-  stubModule("src/services/memoryQdrantService.js", { ...defaultMemoryQdrant, ...memoryQdrant });
+  stubModule("src/modules/memory/memoryQdrant.service.js", { ...defaultMemoryQdrant, ...memoryQdrant });
 
   const { createApp } = require(resolve("src/app.js"));
   return { app: createApp(), models };
